@@ -10,7 +10,7 @@ echo [1/2] Iniciando Backend FastAPI na porta 8000...
 start "Salesdrive - Backend API" cmd /k "cd /d %~dp0 && python backend/main.py"
 
 echo [2/2] Iniciando Frontend React/Vite na porta 3000...
-start "Salesdrive - Frontend Web" cmd /k "cd /d %~dp0frontend && npm run dev"
+start "Salesdrive - Frontend Web" cmd /k "cd /d %~dp0frontend && npm.cmd run dev"
 
 echo.
 echo ========================================================
