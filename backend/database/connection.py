@@ -19,4 +19,18 @@ def init_db():
         c.executescript(open(SCHEMA, encoding="utf-8").read())
     c.close()
 
-    
+@contextmanager
+def tx():
+    """
+    Transação coom BEING IMMEDIATE: serializa escritores (evita venda duplicada do último item).
+    """
+    c = connect()
+    c.execute("BEGIN IMMEDIATE")
+    try:
+        yield c
+        c.execute("COMMIT")
+    except BaseException:
+        c.execute("ROLLBACK")
+        raise
+    finally:
+        c.close()
