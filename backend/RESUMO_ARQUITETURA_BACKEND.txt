@@ -1,0 +1,142 @@
+================================================================================
+GUIA EDUCACIONAL DA ARQUITETURA DO BACKEND (SALESDRIVE - HACKATHON 2026)
+================================================================================
+
+Este documento explica de forma didática tudo o que foi implementado e ajustado
+no backend para você entender a lógica de cada função e poder defender seu projeto
+com autoridade na banca do hackathon e aplicar em projetos futuros.
+
+--------------------------------------------------------------------------------
+1. VISÃO GERAL DA ARQUITETURA
+--------------------------------------------------------------------------------
+- Framework: FastAPI (Python assíncrono, alta performance, OpenAPI/Swagger automático).
+- Banco de Dados: SQLite nativo com WAL (Write-Ahead Logging) e PRAGMA foreign_keys=ON.
+- Controle de Concorrência: Context Manager `tx()` com `BEGIN IMMEDIATE` para serializar
+  escritas e garantir que dois compradores não comprem o mesmo último item do estoque.
+- Auditoria & Governança: Toda mutação relevante (produto, cliente, pedido) gera
+  registro na tabela `auditoria_evento` e no livro-razão `movimento_estoque`.
+- Comunicação com Front: Todas as rotas expostas sob o prefixo `/api` na porta 8000,
+  com CORS totalmente liberado para o Vite (porta 3000 / 5173).
+
+--------------------------------------------------------------------------------
+2. CORREÇÕES REALIZADAS NO SEU CÓDIGO INICIAL (REVISÃO TÉCNICA)
+--------------------------------------------------------------------------------
+a) `connection.py`:
+   - Corrigido o `DB_PATH`: havia uma vírgula acidental transformando a variável numa
+     tupla `(os.getenv("DB_PATH"), ...)`. Ajustado para `os.getenv(...) or ...`.
+   - Corrigido o typo `PRAGMA foreing_keys=ON` -> `PRAGMA foreign_keys=ON`.
+   - Implementado o `init_db()` criando as tabelas de auditoria, estoque e as tabelas
+     de catálogo, clientes, vendedores e pedidos necessárias para o Frontend.
+
+b) `core.py`:
+   - Corrigido o método de inicialização da classe `ErroNegocio`: estava `def __int__`
+     em vez de `def __init__`.
+   - Adicionado valor default `loja_id: int = 1` no dataclass `Ctx`.
+
+c) `main.py`:
+   - O import estava buscando `models.pedido` (no singular); a pasta tem `pedidos.py`.
+   - Adicionada a inclusão dos roteadores com o prefixo `/api` para casar com o React.
+   - Adicionado o bloco `if __name__ == '__main__': uvicorn.run(...)` para inicialização direta.
+
+--------------------------------------------------------------------------------
+3. DETALHAMENTO DE CADA ARQUIVO E SUAS FUNÇÕES
+--------------------------------------------------------------------------------
+
+A) `database/connection.py`
+---------------------------
+- `connect()`: Abre a conexão com o SQLite.
+  - `isolation_level=None`: Desativa transações automáticas do driver Python, permitindo
+    que nós controlemos manualmente o início e fim da transação.
+  - `PRAGMA journal_mode=WAL`: Permite que leituras e escritas ocorram simultaneamente sem travar o banco.
+  - `PRAGMA busy_timeout=5000`: Aguarda até 5 segundos caso outro processo esteja escrevendo.
+- `tx()` (Context Manager):
+  - Executa `BEGIN IMMEDIATE`. Isso garante que transações concorrentes concorram pela trava
+    no momento do início, evitando deadlocks ou leituras sujas.
+  - Se ocorrer qualquer exceção, executa `ROLLBACK` e repassa o erro.
+  - Se finalizar com sucesso, executa `COMMIT`.
+  - No `finally`, fecha a conexão com o banco.
+
+B) `models/core.py` e `models/estoque.py`
+-----------------------------------------
+- `Ctx(loja_id, exec_id, cid)`: Estrutura leve para carregar o contexto da requisição
+  (multi-loja, ID da execução do agente de IA e Correlation ID para tracing de logs).
+- `auditar(conn, ctx, entidade, entidade_id, acao, antes, depois)`:
+  - Salva um instantâneo (snapshot JSON) do estado anterior e posterior da entidade alterada.
+  - Permite auditoria completa e reversão de ações suspeitas ou com erros.
+- `registrar_movimento(conn, ctx, pid, pedido_id, tipo, direcao, qtd, antes, depois)`:
+  - Funciona como um extrato bancário de estoque: toda entrada (compra/estoque inicial)
+    ou saída (venda) gera uma linha imutável com a quantidade e os saldos antes e depois.
+
+C) `routes/products.py` (Módulo de Produtos e Categorias)
+---------------------------------------------------------
+- `GET /api/categories`: Retorna todas as categorias disponíveis para os filtros da loja.
+- `GET /api/products`:
+  - Suporta filtros por `category_id`, `featured` (destaques da home), `active_only`
+    e busca textual em tempo real (`search`) no nome, SKU e descrição.
+- `GET /api/products/{id}`: Retorna a ficha completa de um produto.
+- `POST /api/products`: Cria um novo produto, insere no banco, audita o evento e, se o
+  estoque inicial for maior que zero, já gera uma movimentação de entrada no `movimento_estoque`.
+- `PUT /api/products/{id}`: Atualização segura e dinâmica de campos. Se o estoque for alterado,
+  calcula a diferença e registra o ajuste no histórico.
+- `DELETE /api/products/{id}`: Aplica "Soft Delete" (muda `is_active = 0`), garantindo que
+  pedidos antigos continuem referenciando o produto sem quebrar chaves estrangeiras.
+
+D) `routes/customers.py` (Módulo de Clientes Varejistas)
+--------------------------------------------------------
+- `GET /api/customers`: Lista clientes com busca por nome, razão social, CNPJ/CPF, fone ou e-mail.
+- `POST /api/customers`: Cadastro de cliente com comportamento idempotente (se o CNPJ/CPF já existir,
+  retorna o cliente existente em vez de falhar com erro 500).
+- `PUT /api/customers/{id}`: Permite alterar limites de crédito e dados de contato pela tela Comercial.
+
+E) `routes/sellers.py` (Força de Vendas e Representantes)
+---------------------------------------------------------
+- `GET /api/sellers`: Lista os representantes comerciais para vinculação no checkout ou gestão.
+- `POST /api/sellers` e `PUT /api/sellers/{id}`: Cadastro e atualização de metas e percentual de comissão.
+
+F) `routes/orders.py` (Módulo Crítico de Pedidos e Checkout)
+------------------------------------------------------------
+- `POST /api/orders` (Criação de Pedido com Reserva Atômica):
+  1. Localiza ou cadastra o cliente informado no checkout.
+  2. Gera código único do pedido (`SD-2026-XXXXX`).
+  3. Validação Atômica: Percorre os itens do carrinho e confere se todos têm estoque disponível.
+     Se algum não tiver, interrompe com erro 409 (Conflict) sem alterar nada.
+  4. Insere o cabeçalho do pedido na tabela `orders`.
+  5. Insere os itens na tabela `order_items`.
+  6. Deduz o estoque na tabela `products` e cria o registro no `movimento_estoque`.
+  7. Atualiza o volume de vendas do vendedor vinculado.
+  8. Audita o pedido criado e retorna o objeto completo com os itens para a tela de confirmação.
+- `GET /api/orders`: Lista pedidos com suporte a filtros de status (`PENDING`, `APPROVED`,
+  `SEPARATION`, `BILLED`, `DELIVERED`, `CANCELLED`) e busca textual.
+- `PATCH /api/orders/{id}/status`: Altera a esteira do pedido no painel comercial, auditando a transição.
+
+G) `routes/settings.py` (Configurações e Cupons de Desconto)
+------------------------------------------------------------
+- `GET /api/settings` e `PUT /api/settings`: Gerencia regras de negócio da distribuidora
+  (valor de pedido mínimo, desconto de 5% no PIX, dias de prazo do boleto, frete grátis).
+- `POST /api/coupons/validate`:
+  - Valida se o cupom existe e está ativo.
+  - Verifica se o subtotal atinge o valor mínimo da regra (`min_order_value`).
+  - Calcula o desconto em percentual ou valor fixo e retorna para o carrinho.
+
+H) `routes/dashboard.py` (Painel Analítico do Administrador)
+------------------------------------------------------------
+- `GET /api/dashboard/metrics`:
+  - Calcula em uma única requisição os KPIs executivos: faturamento total, ticket médio,
+    quantidade de pedidos, clientes ativos e alerta de ruptura de estoque (`stock <= 15`).
+  - Retorna os 5 produtos mais vendidos e o ranking de performance dos vendedores em relação à meta.
+
+--------------------------------------------------------------------------------
+4. COMO INICIALIZAR E APRESENTAR NO HACKATHON
+--------------------------------------------------------------------------------
+Opção A (Tudo automático em um clique):
+   - Execute o script: `start_dev.bat` ou `powershell -ExecutionPolicy Bypass -File start_dev.ps1`
+
+Opção B (Manual em dois terminais):
+   - Terminal 1 (Backend):
+     `python backend/main.py`
+     (Disponível em: http://127.0.0.1:8000 | Docs: http://127.0.0.1:8000/docs)
+   - Terminal 2 (Frontend):
+     `cd frontend`
+     `npm run dev`
+     (Disponível em: http://localhost:3000)
+================================================================================
