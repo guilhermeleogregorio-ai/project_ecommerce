@@ -18,7 +18,7 @@ class ItemPedidoIn(BaseModel):
 
 class PedidoCheckoutIn(BaseModel):
     customer_name: str
-    customer_email: str | None = "cliente@papelaria.com"
+    customer_email: str | None = "cliente@loja.com"
     customer_phone: str | None = None
     tipo_entrega: str = "retirada"
     cep_destino: str | None = None

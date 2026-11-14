@@ -10,9 +10,9 @@ def obter_configuracoes_loja(loja_id: int = 1):
         if not loja:
             return {
                 "id": 1,
-                "store_name": "Papelaria & Bazar Central",
-                "phone": "(14) 3413-0000",
-                "address": "Rua São Luiz, 450 - Centro, Marília/SP",
+                "store_name": "Salesdrive Mercearia & Loja Central",
+                "phone": "(14) 3413-5500",
+                "address": "Rua Central do Comércio, 100 - Centro",
                 "reserva_minutos": 120,
                 "aceita_entrega": 1
             }
@@ -48,7 +48,7 @@ def atualizar_configuracoes_loja(payload: dict, loja_id: int = 1):
 @router.get("/lojas")
 def listar_lojas_disponiveis():
     """
-    Demonstra critério de adaptabilidade a diferentes segmentos (Papelaria vs PetShop)
+    Demonstra critério de adaptabilidade a diferentes segmentos e comerciantes locais
     """
     with tx() as conn:
         rows = conn.execute("SELECT id, nome, endereco_retirada, reserva_minutos FROM loja").fetchall()

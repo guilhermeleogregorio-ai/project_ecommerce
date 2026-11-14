@@ -7,7 +7,7 @@ import {
   Settings, 
   LayoutDashboard, 
   Sparkles,
-  HelpCircle
+  Zap
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -22,7 +22,7 @@ export default function Sidebar() {
       label: 'Agentes de IA (Orquestrador)',
       path: '/commercial/customers',
       icon: Bot,
-      badge: 'Catálogo & Vendas'
+      badge: 'Catálogo & WhatsApp'
     },
     {
       label: 'Catálogo de Produtos',
@@ -46,7 +46,7 @@ export default function Sidebar() {
       <div className="space-y-6">
         <div>
           <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3">
-            Operação da Loja Física
+            Gestão da Loja Física
           </span>
           <nav className="mt-2 space-y-1">
             {menuItems.map((item) => {
@@ -78,21 +78,21 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Card Informativo do Desafio Tray */}
-        <div className="p-3.5 bg-gradient-to-br from-indigo-50 to-brand-50 border border-brand-200/60 rounded-2xl">
+        {/* Card Informativo Salesdrive */}
+        <div className="p-3.5 bg-gradient-to-br from-brand-50 to-indigo-50 border border-brand-200/60 rounded-2xl">
           <div className="flex items-center gap-2 text-brand-900 font-bold text-xs">
-            <Sparkles className="w-4 h-4 text-brand-600" />
-            <span>Desafio Tray Varejo</span>
+            <Zap className="w-4 h-4 text-brand-600" />
+            <span>Salesdrive Varejo Local</span>
           </div>
           <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-            Eliminando o atrito da primeira venda digital sem atrapalhar a rotina do lojista físico.
+            Plataforma ajustável para qualquer comércio local realizar a primeira venda digital sem atrito no balcão.
           </p>
         </div>
       </div>
 
       <div className="border-t border-slate-100 pt-3 px-2 text-[11px] text-slate-400 flex items-center justify-between">
-        <span>Papelaria Modelo (Tray)</span>
-        <span className="font-mono text-[10px]">v2.0</span>
+        <span>Salesdrive Varejo</span>
+        <span className="font-mono text-[10px]">v2.1</span>
       </div>
     </aside>
   );

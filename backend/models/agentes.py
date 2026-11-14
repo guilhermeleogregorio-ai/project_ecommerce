@@ -26,7 +26,7 @@ def processar_consulta_estoque(conn, ctx, texto):
     if not produtos:
         return {
             "encontrado": False,
-            "resposta": f"Não encontrei nenhum produto correspondente a '{texto}' no estoque da papelaria.",
+            "resposta": f"Não encontrei nenhum produto correspondente a '{texto}' no estoque da loja.",
             "itens": []
         }
 
@@ -86,7 +86,7 @@ def processar_proposta_cadastro(texto):
         nome_limpo = re.sub(rf'\b{p}\b', '', nome_limpo, flags=re.IGNORECASE)
     nome_limpo = re.sub(r'(\d+[,\.]\d+|\d+\s*unidades?|\d+)', '', nome_limpo).strip()
     if not nome_limpo or len(nome_limpo) < 3:
-        nome_limpo = "Produto Papelaria"
+        nome_limpo = "Produto Novo"
 
     proposta = {
         "nome": nome_limpo.capitalize(),
@@ -94,7 +94,7 @@ def processar_proposta_cadastro(texto):
         "preco_formatado": f"R$ {preco_centavos / 100.0:.2f}",
         "estoque_atual": estoque,
         "local_fisico": local_fisico,
-        "sku": f"PAP-{re.sub(r'[^A-Z0-9]', '', nome_limpo.upper())[:6]}-{estoque}",
+        "sku": f"PROD-{re.sub(r'[^A-Z0-9]', '', nome_limpo.upper())[:6]}-{estoque}",
         "necessita_confirmacao": True
     }
     return proposta
@@ -131,13 +131,13 @@ def processar_pedido_mensagem(conn, ctx, texto):
         }
 
     # Busca ou cria cliente padrão de mensagem
-    cli = conn.execute("SELECT id FROM cliente WHERE email='cliente.zap@papelaria.com'").fetchone()
+    cli = conn.execute("SELECT id FROM cliente WHERE email='cliente.zap@loja.com'").fetchone()
     if cli:
         cliente_id = cli["id"]
     else:
         cur = conn.execute("""
             INSERT INTO cliente (nome, email, telefone, senha_hash, endereco)
-            VALUES ('Cliente WhatsApp', 'cliente.zap@papelaria.com', '(14) 99888-0000', 'hash_simulado', 'Balcão')
+            VALUES ('Cliente WhatsApp', 'cliente.zap@loja.com', '(14) 99888-0000', 'hash_simulado', 'Balcão')
         """)
         cliente_id = cur.lastrowid
 

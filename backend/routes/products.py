@@ -9,9 +9,9 @@ router = APIRouter(tags=["produtos"])
 class ProdutoCreateIn(BaseModel):
     nome: str
     sku: str | None = None
-    preco: float = Field(gt=0, description="Preço em reais (ex: 28.90)")
+    preco: float = Field(gt=0, description="Preço em reais (ex: 18.90)")
     estoque_atual: int = 0
-    local_fisico: str | None = "Balcão / Prateleira"
+    local_fisico: str | None = "Gôndola / Balcão"
     imagem_url: str | None = None
 
 class ProdutoUpdateIn(BaseModel):
@@ -38,7 +38,7 @@ def formatar_produto(p):
         "estoque_reservado": p["estoque_reservado"],
         "saldo_livre": saldo_livre,
         "local_fisico": p["local_fisico"],
-        "image_url": p["imagem_url"] or "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+        "image_url": p["imagem_url"] or "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60",
         "imagem_url": p["imagem_url"],
         "is_active": bool(p["ativo"]),
         "ativo": p["ativo"]
@@ -47,11 +47,11 @@ def formatar_produto(p):
 @router.get("/categories")
 def listar_categorias():
     return [
-        {"id": 1, "name": "Escolar & Universitário", "slug": "escolar"},
-        {"id": 2, "name": "Escrita & Canetas", "slug": "escrita"},
-        {"id": 3, "name": "Papéis & Sulfite", "slug": "papeis"},
-        {"id": 4, "name": "Mochilas & Estojos", "slug": "mochilas"},
-        {"id": 5, "name": "Acessórios de Balcão", "slug": "balcao"}
+        {"id": 1, "name": "Bebidas & Refrigerantes", "slug": "bebidas"},
+        {"id": 2, "name": "Alimentos & Mercearia", "slug": "alimentos"},
+        {"id": 3, "name": "Limpeza & Casa", "slug": "limpeza"},
+        {"id": 4, "name": "Higiene Pessoal", "slug": "higiene"},
+        {"id": 5, "name": "Doces & Balcão", "slug": "doces"}
     ]
 
 @router.get("/products")
@@ -90,7 +90,7 @@ def cadastrar_produto(data: ProdutoCreateIn, loja_id: int = 1):
         ctx = Ctx(loja_id=loja_id)
         d = {
             "nome": data.nome,
-            "sku": data.sku or f"PAP-{data.nome[:4].upper()}",
+            "sku": data.sku or f"PROD-{data.nome[:4].upper()}",
             "preco_centavos": int(round(data.preco * 100)),
             "estoque_atual": data.estoque_atual,
             "local_fisico": data.local_fisico,

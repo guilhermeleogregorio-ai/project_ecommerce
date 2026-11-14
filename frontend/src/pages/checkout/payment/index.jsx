@@ -27,7 +27,7 @@ export default function CheckoutPayment() {
     try {
       const payload = {
         customer_name: checkoutData.customer?.name || 'Cliente da Loja',
-        customer_email: checkoutData.customer?.email || 'cliente@papelaria.com',
+        customer_email: checkoutData.customer?.email || 'cliente@loja.com',
         customer_phone: checkoutData.customer?.phone || '(14) 99888-7766',
         tipo_entrega: 'retirada',
         payment_method: paymentMethod,
@@ -62,7 +62,7 @@ export default function CheckoutPayment() {
             Pedido Emitido com Sucesso!
           </h1>
           <p className="text-sm text-slate-600 max-w-md mx-auto">
-            O estoque físico já foi reservado na papelaria para você retirar sem fila.
+            O estoque físico já foi reservado na loja para você retirar sem fila.
           </p>
         </div>
 
@@ -76,10 +76,10 @@ export default function CheckoutPayment() {
           </div>
           <div className="flex items-center justify-center gap-2 text-xs text-slate-600 pt-2 border-t border-brand-200/80">
             <Store className="w-4 h-4 text-brand-600" />
-            <span>Papelaria & Bazar Central • Rua São Luiz, 450</span>
+            <span>Salesdrive Loja Física • Retirada Rápida</span>
           </div>
           <p className="text-[11px] text-slate-500">
-            Apresente este código no balcão da loja física para retirar seus produtos imediatamente.
+            Apresente este código no balcão da loja para retirar seus produtos imediatamente.
           </p>
         </div>
 
@@ -116,10 +116,10 @@ export default function CheckoutPayment() {
         </div>
         <div className="space-y-1">
           <h3 className="font-bold text-sm text-slate-900">
-            Retirada na Papelaria & Bazar Central
+            Retirada na Loja Física (Salesdrive Hub)
           </h3>
           <p className="text-xs text-slate-600">
-            Rua São Luiz, 450 - Centro, Marília/SP • Tel: (14) 3413-0000
+            Rua Central do Comércio, 100 - Centro • Tel: (14) 3413-5500
           </p>
           <div className="flex items-center gap-2 text-[11px] text-emerald-700 font-semibold pt-1">
             <Clock className="w-3.5 h-3.5" />

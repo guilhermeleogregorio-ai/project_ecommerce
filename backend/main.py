@@ -20,7 +20,7 @@ from routes import products, orders, agentes, dashboard, settings
 async def lifespan(app: FastAPI):
     # 1. Executa schema.sql oficial do desafio
     init_db()
-    # 2. Popula dados reais da Papelaria Modelo (Tray Hackathon)
+    # 2. Popula dados de demonstração (Plataforma multi-loja ajustável)
     seed()
     
     # 3. Rotina assíncrona periódica: libera reservas vencidas
@@ -38,8 +38,8 @@ async def lifespan(app: FastAPI):
     tarefa.cancel()
 
 app = FastAPI(
-    title="Tray - Varejo Local Inteligente API",
-    description="Backend oficial focado na primeira venda digital do varejo físico, rotina do balcão e agentes de IA",
+    title="Salesdrive - Plataforma de Varejo Local Inteligente API",
+    description="Backend oficial Salesdrive focado na primeira venda digital do varejo físico, rotina do balcão e agentes de IA",
     version="2.0.0",
     lifespan=lifespan
 )
@@ -64,7 +64,7 @@ def raiz():
     return {
         "status": "online",
         "projeto": "Tray E-commerce - Desafio Varejo Local",
-        "empresa": "Papelaria & Bazar Central",
+        "empresa": "Salesdrive Mercearia & Loja Central",
         "documentacao": "/docs"
     }
 

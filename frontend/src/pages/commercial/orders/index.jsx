@@ -104,7 +104,7 @@ export default function BalcaoOperacao() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">
-            Rotina da Loja Física (Papelaria Central)
+            Rotina da Loja Física (Salesdrive Loja Central)
           </span>
           <h1 className="text-2xl font-black text-slate-900 mt-0.5">
             Balcão de Atendimento & Retiradas

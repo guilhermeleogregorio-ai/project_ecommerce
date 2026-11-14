@@ -110,7 +110,7 @@ def separar_pedido(c, ctx, pedido_id):
 
 def concluir_retirada(c, ctx, codigo_retirada):
     """
-    Cliente chega no balcão da papelaria e informa o código de retirada.
+    Cliente chega no balcão da loja física e informa o código de retirada.
     O sistema baixa o estoque definitivamente (estoque_atual e estoque_reservado)
     e grava a saída no livro movimento_estoque.
     """
@@ -149,9 +149,9 @@ def concluir_retirada(c, ctx, codigo_retirada):
 
 def registrar_venda_balcao(c, ctx, itens, usuario_id=None):
     """
-    Venda direta presencial no balcão da papelaria.
+    Venda direta presencial no balcão da loja física.
     Baixa o estoque_atual imediatamente sem passar por reserva online.
-    Evita que o lojista venda um caderno no balcão que já estava reservado online!
+    Evita que o lojista venda no balcão um item que já estava reservado online!
     """
     for it in itens:
         pid = it["produto_id"]
