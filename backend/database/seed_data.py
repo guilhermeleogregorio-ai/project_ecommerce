@@ -47,7 +47,12 @@ def seed():
             (5, 1, 'Detergente Líquido Ypê Neutro 500ml', 'LIM-YPE-500', 299, 90, 0, 'Gôndola C1 - Limpeza', 'https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80', 1),
             (6, 1, 'Sabão em Pó OMO Lavagem Perfeita 1.6kg', 'LIM-OMO-16K', 2190, 25, 0, 'Gôndola C2 - Limpeza', 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?w=600&auto=format&fit=crop&q=80', 1),
             (7, 1, 'Sabonete Dove Original 90g Barra', 'HIG-DOV-90G', 450, 75, 0, 'Prateleira B1 - Higiene', 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=600&auto=format&fit=crop&q=80', 1),
-            (8, 1, 'Chocolate Bis Lacta Ao Leite 126g', 'DOC-BIS-126', 690, 60, 0, 'Balcão de Caixa - Pote 1', 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=600&auto=format&fit=crop&q=80', 1)
+            (8, 1, 'Chocolate Bis Lacta Ao Leite 126g', 'DOC-BIS-126', 690, 60, 0, 'Balcão de Caixa - Pote 1', 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=600&auto=format&fit=crop&q=80', 1),
+            (9, 1, 'Água Mineral Crystal Sem Gás 500ml', 'BEB-AGU-500', 250, 80, 0, 'Geladeira 1 - Bebidas', 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&auto=format&fit=crop&q=60', 1),
+            (10, 1, 'Pão de Forma Tradicional Pullman 500g', 'ALI-PAO-500', 950, 25, 0, 'Gôndola A1 - Mercearia', 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=60', 1),
+            (11, 1, 'Leite Integral Piracanjuba 1 Litro', 'BEB-LEI-1L', 580, 60, 0, 'Prateleira Fundo - Bebidas', 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500&auto=format&fit=crop&q=60', 1),
+            (12, 1, 'Creme Dental Colgate Total 12 90g', 'HIG-COL-90G', 690, 45, 0, 'Prateleira B1 - Higiene', 'https://images.unsplash.com/photo-1559567244-809772c67645?w=500&auto=format&fit=crop&q=60', 1),
+            (13, 1, 'Papel Higiênico Neve Folha Dupla 4 Rolos', 'LIM-NEV-4UN', 1290, 30, 0, 'Gôndola C3 - Limpeza', 'https://images.unsplash.com/photo-1584556812952-905ffd0c611a?w=500&auto=format&fit=crop&q=60', 1)
         ]
         cursor.executemany("""
             INSERT INTO produto (id, loja_id, nome, sku, preco_centavos, estoque_atual, estoque_reservado, local_fisico, imagem_url, ativo)

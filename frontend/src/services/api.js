@@ -71,6 +71,7 @@ export const api = {
     if (params.status && params.status !== 'ALL') query.append('status', params.status);
     if (params.customer_id) query.append('customer_id', params.customer_id);
     if (params.seller_id) query.append('seller_id', params.seller_id);
+    if (params.codigo_retirada) query.append('codigo_retirada', params.codigo_retirada);
     if (params.search) query.append('search', params.search);
     const qs = query.toString();
     return request(`/orders${qs ? '?' + qs : ''}`);
@@ -79,9 +80,31 @@ export const api = {
   createOrder: (data) => request('/orders', { method: 'POST', body: JSON.stringify(data) }),
   updateOrderStatus: (id, data) => request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
 
-  // Configurações & Cupons
+  // Operação de Balcão da Loja Física
+  registrarVendaBalcao: (items) => request('/balcao/venda', {
+    method: 'POST',
+    body: JSON.stringify({ items })
+  }),
+  concluirRetiradaBalcao: (codigo_retirada) => request('/balcao/retirar', {
+    method: 'POST',
+    body: JSON.stringify({ codigo_retirada })
+  }),
+
+  // Orquestrador de Agentes de IA & Cluster de Instâncias
+  orquestrarAgente: (data) => request('/agentes/orquestrar', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  getClusterStatus: () => request('/agentes/cluster'),
+  adicionarInstancia: (data) => request('/agentes/instancias', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  // Configurações da Loja
   getSettings: () => request('/settings'),
   updateSettings: (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  getLojas: () => request('/lojas'),
   validateCoupon: (code, subtotal) => request('/coupons/validate', {
     method: 'POST',
     body: JSON.stringify({ code, subtotal })
