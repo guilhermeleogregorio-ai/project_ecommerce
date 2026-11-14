@@ -19,3 +19,8 @@ class Ctx:
 def _j(x):
     return None if x is None else json.dumps(x, ensure_ascii=False)
 
+def auditar(c, ctx, entidade, entidade_id, acao, antes=None, depois=None, detalhes=None):
+    c.execute("""INSERT INTO auditoria_evento(loja_id,agente_execucao_id,correlation_id,entidade,entidade_id,
+                 acao,dados_anteriores,dados_posteriores,detalhes,origem) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+              (ctx.loja_id, ctx.exec_id, ctx.cid, entidade, entidade_id, acao, _j(antes), _j(depois), detalhes,
+               "agente" if ctx.exec_id else "usuario"))
