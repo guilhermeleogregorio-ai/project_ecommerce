@@ -1,3 +1,3 @@
-from . import products, customers, sellers, orders, settings, dashboard
+from . import products, orders, agentes, dashboard, settings
 
-__all__ = ["products", "customers", "sellers", "orders", "settings", "dashboard"]
+__all__ = ["products", "orders", "agentes", "dashboard", "settings"]

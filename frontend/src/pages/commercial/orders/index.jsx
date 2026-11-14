@@ -1,352 +1,288 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, 
+  Store, 
   Search, 
-  Filter, 
   CheckCircle2, 
   Clock, 
   PackageCheck, 
-  Truck, 
-  XCircle, 
-  Eye, 
-  X, 
-  Printer, 
-  ChevronDown,
-  Building2,
-  Calendar,
-  CreditCard,
-  UserCheck
+  ShoppingBag, 
+  AlertTriangle,
+  ArrowRight,
+  ShieldCheck,
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 import { api } from '../../../services/api';
 
-const STATUS_CONFIG = {
-  PENDING: { label: 'Pendente', bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
-  APPROVED: { label: 'Aprovado', bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: CheckCircle2 },
-  SEPARATION: { label: 'Em Separação', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: ShoppingBag },
-  BILLED: { label: 'Faturado', bg: 'bg-purple-50 text-purple-700 border-purple-200', icon: PackageCheck },
-  DELIVERED: { label: 'Entregue', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Truck },
-  CANCELLED: { label: 'Cancelado', bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle },
-};
-
-export default function CommercialOrders() {
+export default function BalcaoOperacao() {
   const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [updating, setUpdating] = useState(false);
+  
+  // Entrega por código de retirada
+  const [codigoRetiradaInput, setCodigoRetiradaInput] = useState('');
+  const [mensagemRetirada, setMensagemRetirada] = useState(null);
+  
+  // Venda rápida presencial de balcão
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [vendaQtd, setVendaQtd] = useState(1);
+  const [vendaMensagem, setVendaMensagem] = useState(null);
 
-  const fetchOrders = async () => {
+  const carregarDados = async () => {
     setLoading(true);
     try {
-      const data = await api.getOrders({
-        status: statusFilter,
-        search: search.trim()
-      });
-      setOrders(data);
+      const [ords, prods] = await Promise.all([
+        api.getOrders(),
+        api.getProducts()
+      ]);
+      setOrders(ords);
+      setProducts(prods);
     } catch (err) {
-      console.error('Erro ao buscar pedidos:', err);
+      console.error('Erro ao carregar dados do balcão:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [statusFilter]);
+    carregarDados();
+  }, []);
 
-  const handleSearchSubmit = (e) => {
+  const handleEntregarRetirada = async (e) => {
     e.preventDefault();
-    fetchOrders();
+    if (!codigoRetiradaInput) return;
+    try {
+      const res = await api.concluirRetiradaBalcao(codigoRetiradaInput.trim());
+      setMensagemRetirada({
+        tipo: 'sucesso',
+        texto: `Retirada confirmada com sucesso! Pedido #${res.id} entregue ao cliente e estoque baixado.`
+      });
+      setCodigoRetiradaInput('');
+      carregarDados();
+    } catch (err) {
+      setMensagemRetirada({
+        tipo: 'erro',
+        texto: err.message || 'Código de retirada não encontrado ou já retirado.'
+      });
+    }
   };
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
-    setUpdating(true);
+  const handleVendaBalcao = async (e) => {
+    e.preventDefault();
+    if (!selectedProductId) return;
     try {
-      const updated = await api.updateOrderStatus(orderId, { status: newStatus });
-      setSelectedOrder(updated);
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+      await api.registrarVendaBalcao([
+        { product_id: parseInt(selectedProductId), quantity: parseInt(vendaQtd) }
+      ]);
+      setVendaMensagem({
+        tipo: 'sucesso',
+        texto: 'Venda presencial registrada! Estoque físico baixado imediatamente.'
+      });
+      setSelectedProductId('');
+      setVendaQtd(1);
+      carregarDados();
     } catch (err) {
-      alert(`Erro ao atualizar status: ${err.message}`);
-    } finally {
-      setUpdating(false);
+      setVendaMensagem({
+        tipo: 'erro',
+        texto: err.message || 'Falha ao registrar venda presencial.'
+      });
+    }
+  };
+
+  const handleMarcarSeparado = async (orderId) => {
+    try {
+      await api.updateOrderStatus(orderId, { status: 'separado' });
+      carregarDados();
+    } catch (err) {
+      alert('Erro ao separar pedido: ' + err.message);
     }
   };
 
   return (
-    <div className="space-y-6 pb-16">
-      {/* Header do Módulo Comercial */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-8 pb-16">
+      {/* Header do Balcão */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <ShoppingBag className="w-6 h-6 text-brand-600" />
-            <span>Gestão Operacional de Pedidos</span>
+          <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">
+            Rotina da Loja Física (Papelaria Central)
+          </span>
+          <h1 className="text-2xl font-black text-slate-900 mt-0.5">
+            Balcão de Atendimento & Retiradas
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            Acompanhe a emissão, faturamento e logística de entrega para o varejo.
+          <p className="text-xs text-slate-500 mt-1">
+            Controle integrado entre a venda presencial e os pedidos retirados na loja.
           </p>
         </div>
-
-        <form onSubmit={handleSearchSubmit} className="w-full sm:w-72 relative">
-          <input
-            type="text"
-            placeholder="Buscar pedido, cliente ou CNPJ..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full text-xs pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        </form>
+        <button
+          onClick={carregarDados}
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+          <span>Atualizar Estoque</span>
+        </button>
       </div>
 
-      {/* Abas de Filtros de Status */}
-      <div className="flex gap-2 overflow-x-auto pb-1 text-xs">
-        {['ALL', 'PENDING', 'SEPARATION', 'BILLED', 'DELIVERED', 'CANCELLED'].map((st) => (
-          <button
-            key={st}
-            onClick={() => setStatusFilter(st)}
-            className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all border ${
-              statusFilter === st
-                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            {st === 'ALL' ? 'Todos os Pedidos' : STATUS_CONFIG[st]?.label || st}
-          </button>
-        ))}
-      </div>
-
-      {/* Tabela de Pedidos */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-slate-400 text-xs">
-            <div className="w-8 h-8 border-3 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            Carregando pedidos...
+      {/* Grid: 1. Concluir Retirada | 2. Venda Presencial no Balcão */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Card 1: Baixar Retirada por Código */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+          <div className="flex items-center gap-2.5 text-brand-700 font-bold text-sm">
+            <PackageCheck className="w-5 h-5 text-brand-600" />
+            <span>Entregar Pedido Retirado no Balcão</span>
           </div>
-        ) : orders.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 text-xs space-y-2">
-            <ShoppingBag className="w-10 h-10 text-slate-300 mx-auto" />
-            <p className="font-bold text-slate-700">Nenhum pedido encontrado</p>
-            <p className="text-slate-400">Tente ajustar seus termos de busca ou filtros de status.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
-                <tr>
-                  <th className="py-3 px-4">Pedido / Data</th>
-                  <th className="py-3 px-4">Cliente / CNPJ</th>
-                  <th className="py-3 px-4">Representante</th>
-                  <th className="py-3 px-4">Pagamento</th>
-                  <th className="py-3 px-4">Valor Total</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {orders.map((ord) => {
-                  const statusConf = STATUS_CONFIG[ord.status] || STATUS_CONFIG.PENDING;
-                  const StatusIcon = statusConf.icon;
+          <p className="text-xs text-slate-500 mt-1">
+            Quando o cliente chegar à loja e disser o código de 6 dígitos gerado na compra digital.
+          </p>
 
-                  return (
-                    <tr key={ord.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <span className="font-bold text-slate-900 block font-mono">
-                          {ord.order_number}
-                        </span>
-                        <span className="text-[10px] text-slate-400">{ord.created_at}</span>
-                      </td>
+          <form onSubmit={handleEntregarRetirada} className="mt-4 flex gap-3">
+            <input
+              type="text"
+              placeholder="Ex: RET-101 ou 6 dígitos"
+              value={codigoRetiradaInput}
+              onChange={(e) => setCodigoRetiradaInput(e.target.value.toUpperCase())}
+              className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-mono uppercase focus:ring-2 focus:ring-brand-500 outline-none"
+            />
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+            >
+              Confirmar Retirada
+            </button>
+          </form>
 
-                      <td className="py-3.5 px-4">
-                        <span className="font-semibold text-slate-800 block">{ord.customer_name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{ord.customer_document}</span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-slate-600">
-                        <span className="flex items-center gap-1">
-                          <UserCheck className="w-3.5 h-3.5 text-brand-500" />
-                          {ord.seller_name || 'Venda Online'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span className="font-semibold text-slate-700 uppercase block">{ord.payment_method}</span>
-                        <span className={`text-[10px] font-bold ${ord.payment_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {ord.payment_status === 'PAID' ? 'Liquidado' : 'Aguardando Pagamento'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-black text-slate-900">
-                        R$ {ord.total.toFixed(2)}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusConf.bg}`}>
-                          <StatusIcon className="w-3 h-3" />
-                          <span>{statusConf.label}</span>
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => setSelectedOrder(ord)}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors inline-flex items-center gap-1"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Ver</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Modal de Detalhes do Pedido */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
-            {/* Header Modal */}
-            <div className="p-6 border-b border-slate-100 flex justify-between items-start sticky top-0 bg-white z-10">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-black text-slate-900">Pedido #{selectedOrder.order_number}</h2>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${STATUS_CONFIG[selectedOrder.status]?.bg}`}>
-                    {STATUS_CONFIG[selectedOrder.status]?.label}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">Emitido em: {selectedOrder.created_at}</p>
-              </div>
-
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
+          {mensagemRetirada && (
+            <div className={`mt-3 p-3 rounded-xl text-xs font-medium ${
+              mensagemRetirada.tipo === 'sucesso' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+            }`}>
+              {mensagemRetirada.texto}
             </div>
+          )}
+        </div>
 
-            {/* Conteúdo */}
-            <div className="p-6 space-y-6 text-xs">
-              {/* Mudança Operacional de Status */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <p className="font-bold text-slate-800">Alterar Status Operacional:</p>
-                  <p className="text-[11px] text-slate-500">Atualiza o processo logístico em tempo real.</p>
-                </div>
+        {/* Card 2: Venda Presencial Direta */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+          <div className="flex items-center gap-2.5 text-indigo-700 font-bold text-sm">
+            <ShoppingBag className="w-5 h-5 text-indigo-600" />
+            <span>Venda Rápida Presencial (Balcão Físico)</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Cliente no balcão: baixa estoque imediatamente e não permite vender item reservado online.
+          </p>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {['PENDING', 'SEPARATION', 'BILLED', 'DELIVERED', 'CANCELLED'].map((st) => (
-                    <button
-                      key={st}
-                      disabled={updating || selectedOrder.status === st}
-                      onClick={() => handleUpdateStatus(selectedOrder.id, st)}
-                      className={`px-2.5 py-1 rounded-lg font-bold text-[10px] transition-all ${
-                        selectedOrder.status === st
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      {STATUS_CONFIG[st]?.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <form onSubmit={handleVendaBalcao} className="mt-4 flex flex-col sm:flex-row gap-3">
+            <select
+              value={selectedProductId}
+              onChange={(e) => setSelectedProductId(e.target.value)}
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Selecione o produto do balcão...</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id} disabled={p.saldo_livre <= 0}>
+                  {p.name} — Livre: {p.saldo_livre} un (Total: {p.stock})
+                </option>
+              ))}
+            </select>
 
-              {/* Dados do Cliente & Entrega */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="space-y-1">
-                  <p className="font-bold text-slate-700">Cliente Varejista</p>
-                  <p className="text-slate-900 font-semibold">{selectedOrder.customer_name}</p>
-                  <p className="text-slate-500 font-mono">{selectedOrder.customer_document}</p>
-                  <p className="text-slate-500">{selectedOrder.customer_phone} • {selectedOrder.customer_email}</p>
-                </div>
+            <input
+              type="number"
+              min="1"
+              max="99"
+              value={vendaQtd}
+              onChange={(e) => setVendaQtd(e.target.value)}
+              className="w-20 px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono text-center outline-none focus:ring-2 focus:ring-indigo-500"
+            />
 
-                <div className="space-y-1">
-                  <p className="font-bold text-slate-700">Entrega & Vendedor</p>
-                  <p className="text-slate-600">{selectedOrder.shipping_address || 'Retirada no depósito'}</p>
-                  <p className="text-brand-600 font-medium">Vendedor: {selectedOrder.seller_name}</p>
-                  {selectedOrder.notes && (
-                    <p className="text-amber-800 bg-amber-50 p-1.5 rounded text-[11px] mt-1 border border-amber-200">
-                      Obs: {selectedOrder.notes}
-                    </p>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+            >
+              Baixar Venda
+            </button>
+          </form>
+
+          {vendaMensagem && (
+            <div className={`mt-3 p-3 rounded-xl text-xs font-medium ${
+              vendaMensagem.tipo === 'sucesso' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+            }`}>
+              {vendaMensagem.texto}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Fila de Pedidos para Retirada na Loja */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-sm text-slate-900">
+              Pedidos Digitais Aguardando Retirada ou Separação
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Itens já pagos ou reservados digitalmente para retirada na loja física.
+            </p>
+          </div>
+          <span className="text-xs bg-brand-50 text-brand-700 font-bold px-3 py-1 rounded-full border border-brand-200">
+            {orders.filter(o => ['pago', 'separado', 'aguardando_pagamento'].includes(o.status)).length} ativos
+          </span>
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {orders.map((ord) => (
+            <div key={ord.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/50 transition">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-sm text-slate-900">{ord.order_number}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                    ord.status === 'concluido' ? 'bg-emerald-100 text-emerald-800' :
+                    ord.status === 'separado' ? 'bg-indigo-100 text-indigo-800' :
+                    ord.status === 'pago' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {ord.status}
+                  </span>
+                  {ord.codigo_retirada && (
+                    <span className="bg-slate-900 text-white font-mono text-[11px] font-bold px-2 py-0.5 rounded-md">
+                      Código: {ord.codigo_retirada}
+                    </span>
                   )}
                 </div>
-              </div>
-
-              {/* Itens do Pedido */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-slate-800">Itens do Pedido ({selectedOrder.items?.length || 0})</h3>
-                <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
-                  {selectedOrder.items?.map((it) => (
-                    <div key={it.id} className="p-3 flex justify-between items-center bg-white hover:bg-slate-50">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={it.image_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=80'}
-                          alt={it.product_name}
-                          className="w-10 h-10 object-cover rounded-lg border border-slate-200"
-                        />
-                        <div>
-                          <p className="font-bold text-slate-800">{it.product_name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">SKU: {it.product_sku}</p>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="font-bold text-slate-900">R$ {it.total_price.toFixed(2)}</p>
-                        <p className="text-[10px] text-slate-500">{it.quantity}x de R$ {it.unit_price.toFixed(2)}</p>
-                      </div>
-                    </div>
+                <p className="text-xs text-slate-600">
+                  <span className="font-medium text-slate-900">{ord.customer_name}</span> • Total: R$ {ord.total.toFixed(2)}
+                </p>
+                <div className="text-[11px] text-slate-500 flex flex-wrap gap-2">
+                  {ord.items?.map((it, idx) => (
+                    <span key={idx} className="bg-slate-100 px-2 py-0.5 rounded">
+                      {it.quantity}x {it.product_name}
+                    </span>
                   ))}
                 </div>
               </div>
 
-              {/* Totais */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal</span>
-                  <span>R$ {selectedOrder.subtotal.toFixed(2)}</span>
-                </div>
-                {selectedOrder.discount > 0 && (
-                  <div className="flex justify-between text-emerald-600">
-                    <span>Desconto</span>
-                    <span>- R$ {selectedOrder.discount.toFixed(2)}</span>
-                  </div>
+              <div className="flex items-center gap-2">
+                {ord.status === 'pago' && (
+                  <button
+                    onClick={() => handleMarcarSeparado(ord.id)}
+                    className="px-3.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition"
+                  >
+                    Marcar como Separado na Caixa
+                  </button>
                 )}
-                <div className="flex justify-between text-slate-600">
-                  <span>Frete</span>
-                  <span>R$ {selectedOrder.shipping_fee.toFixed(2)}</span>
-                </div>
-                <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-sm text-slate-900">
-                  <span>Total Faturado</span>
-                  <span className="text-brand-600">R$ {selectedOrder.total.toFixed(2)}</span>
-                </div>
+                {ord.status === 'separado' && (
+                  <span className="text-xs font-bold text-indigo-700 flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                    Pronto na caixa de retirada
+                  </span>
+                )}
+                {ord.status === 'concluido' && (
+                  <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    Retirado pelo cliente
+                  </span>
+                )}
               </div>
             </div>
-
-            {/* Footer Modal */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-3xl flex justify-between">
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 hover:bg-slate-100"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Imprimir Espelho</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

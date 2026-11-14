@@ -4,95 +4,64 @@ from database.connection import tx
 router = APIRouter(tags=["dashboard"])
 
 @router.get("/dashboard/metrics")
-def get_dashboard_metrics():
+def obter_metricas_varejo(loja_id: int = 1):
     with tx() as conn:
-        # 1. Totalizadores gerais
-        orders_row = conn.execute("""
-        SELECT 
-            COUNT(*) as total_orders,
-            COALESCE(SUM(total), 0.0) as total_revenue,
-            COALESCE(AVG(total), 0.0) as avg_ticket
-        FROM orders
-        """).fetchone()
+        # 1. Totalizadores de pedidos
+        pedidos_rows = conn.execute("""
+            SELECT 
+                COUNT(*) as total_pedidos,
+                COALESCE(SUM(total_centavos), 0) as total_vendas_centavos
+            FROM pedido
+            WHERE loja_id = ? AND status IN ('pago', 'separado', 'concluido')
+        """, (loja_id,)).fetchone()
 
-        pending_row = conn.execute("SELECT COUNT(*) FROM orders WHERE status = 'PENDING'").fetchone()
-        customers_row = conn.execute("SELECT COUNT(*) FROM customers WHERE status = 'ACTIVE'").fetchone()
-        low_stock_row = conn.execute("SELECT COUNT(*) FROM products WHERE stock <= 15 AND is_active = 1").fetchone()
+        total_vendas = pedidos_rows["total_vendas_centavos"] / 100.0
+        total_pedidos = pedidos_rows["total_pedidos"]
 
-        kpis = {
-            "total_sales": round(orders_row["total_revenue"], 2),
-            "orders_count": orders_row["total_orders"],
-            "average_ticket": round(orders_row["avg_ticket"], 2),
-            "pending_orders": pending_row[0],
-            "active_customers": customers_row[0],
-            "low_stock_count": low_stock_row[0]
-        }
+        # Pedidos aguardando retirada ou separação
+        pendentes_retirada = conn.execute("""
+            SELECT COUNT(*) FROM pedido 
+            WHERE loja_id = ? AND status IN ('pago', 'separado')
+        """, (loja_id,)).fetchone()[0]
 
-        # 2. Status counts
-        status_rows = conn.execute("SELECT status, COUNT(*) as count FROM orders GROUP BY status").fetchall()
-        status_counts = {r["status"]: r["count"] for r in status_rows}
+        # 2. Alertas de estoque baixo (<= 15 unidades no balcão)
+        low_stock_rows = conn.execute("""
+            SELECT id, nome as name, sku, estoque_atual as stock, 
+                   estoque_reservado, (estoque_atual - estoque_reservado) as saldo_livre,
+                   local_fisico
+            FROM produto
+            WHERE loja_id = ? AND (estoque_atual - estoque_reservado) <= 15 AND ativo = 1
+            ORDER BY saldo_livre ASC
+        """, (loja_id,)).fetchall()
 
-        # 3. Produtos mais vendidos
-        top_prods_rows = conn.execute("""
-        SELECT 
-            oi.product_name, 
-            oi.product_sku, 
-            SUM(oi.quantity) as total_qty, 
-            SUM(oi.total_price) as total_amount
-        FROM order_items oi
-        JOIN orders o ON o.id = oi.order_id
-        GROUP BY oi.product_id
-        ORDER BY total_qty DESC
-        LIMIT 5
-        """).fetchall()
-        top_products = [dict(r) for r in top_prods_rows]
+        # 3. Execuções recentes dos agentes de IA
+        agentes_rows = conn.execute("""
+            SELECT id, agente, solicitacao, status, iniciado_em
+            FROM agente_execucao
+            WHERE loja_id = ?
+            ORDER BY id DESC
+            LIMIT 5
+        """, (loja_id,)).fetchall()
 
-        # 4. Top vendedores
-        top_sellers_rows = conn.execute("""
-        SELECT id, name, code, region, current_sales, monthly_goal,
-               ROUND((current_sales / NULLIF(monthly_goal, 0)) * 100, 1) as goal_reached_percent
-        FROM sellers
-        WHERE active = 1
-        ORDER BY current_sales DESC
-        LIMIT 5
-        """).fetchall()
-        top_sellers = [dict(r) for r in top_sellers_rows]
-
-        # 5. Alertas de estoque baixo
-        low_stock_prods = conn.execute("""
-        SELECT id, name, sku, stock, min_quantity, category_name
-        FROM products
-        WHERE stock <= 15 AND is_active = 1
-        ORDER BY stock ASC
-        LIMIT 6
-        """).fetchall()
-        low_stock_alerts = [dict(r) for r in low_stock_prods]
-
-        # 6. Pedidos recentes
-        recent_rows = conn.execute("""
-        SELECT id, order_number, customer_name, total, payment_method, status, created_at
-        FROM orders
-        ORDER BY id DESC
-        LIMIT 6
-        """).fetchall()
-        recent_orders = [dict(r) for r in recent_rows]
-
-        # 7. Timeline simplificada de vendas
-        timeline_rows = conn.execute("""
-        SELECT DATE(created_at) as date, COUNT(*) as count, SUM(total) as amount
-        FROM orders
-        GROUP BY DATE(created_at)
-        ORDER BY date ASC
-        LIMIT 7
-        """).fetchall()
-        sales_timeline = [dict(r) for r in timeline_rows]
+        # 4. Movimentações recentes de estoque (audit trail)
+        mov_rows = conn.execute("""
+            SELECT m.*, p.nome as produto_nome
+            FROM movimento_estoque m
+            JOIN produto p ON p.id = m.produto_id
+            WHERE m.loja_id = ?
+            ORDER BY m.id DESC
+            LIMIT 6
+        """, (loja_id,)).fetchall()
 
         return {
-            "kpis": kpis,
-            "status_counts": status_counts,
-            "top_products": top_products,
-            "top_sellers": top_sellers,
-            "low_stock_alerts": low_stock_alerts,
-            "recent_orders": recent_orders,
-            "sales_timeline": sales_timeline
+            "kpis": {
+                "total_sales": round(total_vendas, 2),
+                "orders_count": total_pedidos,
+                "pending_pickup": pendentes_retirada,
+                "low_stock_count": len(low_stock_rows),
+                "ai_executions_count": conn.execute("SELECT COUNT(*) FROM agente_execucao WHERE loja_id = ?", (loja_id,)).fetchone()[0]
+            },
+            "low_stock_alerts": [dict(r) for r in low_stock_rows],
+            "recent_ai_executions": [dict(r) for r in agentes_rows],
+            "recent_stock_movements": [dict(r) for r in mov_rows]
         }

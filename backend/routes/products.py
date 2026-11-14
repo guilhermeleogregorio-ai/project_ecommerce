@@ -1,167 +1,123 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from database.connection import tx
-from models.core import Ctx, auditar
-from models.estoque import registrar_movimento
+from models.core import Ctx
+from models.produto import criar_produto, atualizar_produto
 
-router = APIRouter(tags=["products"])
+router = APIRouter(tags=["produtos"])
 
-class ProductCreate(BaseModel):
-    name: str
-    sku: str
-    category_id: int | None = None
-    category_name: str | None = None
-    description: str | None = None
-    price: float = Field(gt=0)
-    promo_price: float | None = None
-    unit: str = "UN"
-    min_quantity: int = 1
-    box_quantity: int = 1
-    stock: int = 0
-    image_url: str | None = None
-    is_active: bool = True
-    featured: bool = False
-
-class ProductUpdate(BaseModel):
-    name: str | None = None
+class ProdutoCreateIn(BaseModel):
+    nome: str
     sku: str | None = None
-    category_id: int | None = None
-    category_name: str | None = None
-    description: str | None = None
-    price: float | None = None
-    promo_price: float | None = None
-    unit: str | None = None
-    min_quantity: int | None = None
-    box_quantity: int | None = None
-    stock: int | None = None
-    image_url: str | None = None
-    is_active: bool | None = None
-    featured: bool | None = None
+    preco: float = Field(gt=0, description="Preço em reais (ex: 28.90)")
+    estoque_atual: int = 0
+    local_fisico: str | None = "Balcão / Prateleira"
+    imagem_url: str | None = None
+
+class ProdutoUpdateIn(BaseModel):
+    nome: str | None = None
+    sku: str | None = None
+    preco: float | None = None
+    estoque_atual: int | None = None
+    local_fisico: str | None = None
+    imagem_url: str | None = None
+    ativo: int | None = None
+
+def formatar_produto(p):
+    saldo_livre = p["estoque_atual"] - p["estoque_reservado"]
+    return {
+        "id": p["id"],
+        "loja_id": p["loja_id"],
+        "name": p["nome"],
+        "nome": p["nome"],
+        "sku": p["sku"],
+        "price": p["preco_centavos"] / 100.0,
+        "preco_centavos": p["preco_centavos"],
+        "stock": p["estoque_atual"],
+        "estoque_atual": p["estoque_atual"],
+        "estoque_reservado": p["estoque_reservado"],
+        "saldo_livre": saldo_livre,
+        "local_fisico": p["local_fisico"],
+        "image_url": p["imagem_url"] or "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+        "imagem_url": p["imagem_url"],
+        "is_active": bool(p["ativo"]),
+        "ativo": p["ativo"]
+    }
 
 @router.get("/categories")
-def list_categories():
-    with tx() as conn:
-        rows = conn.execute("SELECT * FROM categories ORDER BY name ASC").fetchall()
-        return [dict(r) for r in rows]
+def listar_categorias():
+    return [
+        {"id": 1, "name": "Escolar & Universitário", "slug": "escolar"},
+        {"id": 2, "name": "Escrita & Canetas", "slug": "escrita"},
+        {"id": 3, "name": "Papéis & Sulfite", "slug": "papeis"},
+        {"id": 4, "name": "Mochilas & Estojos", "slug": "mochilas"},
+        {"id": 5, "name": "Acessórios de Balcão", "slug": "balcao"}
+    ]
 
 @router.get("/products")
-def list_products(
-    category_id: int | None = Query(None),
-    search: str | None = Query(None),
-    featured: bool | None = Query(None),
-    active_only: bool | None = Query(None)
+def listar_produtos(
+    search: str | None = None,
+    active_only: bool | None = None,
+    loja_id: int = 1
 ):
     with tx() as conn:
-        query = "SELECT * FROM products WHERE 1=1"
-        params = []
-
-        if category_id is not None:
-            query += " AND category_id = ?"
-            params.append(category_id)
+        query = "SELECT * FROM produto WHERE loja_id = ?"
+        params = [loja_id]
 
         if active_only:
-            query += " AND is_active = 1"
-
-        if featured is not None:
-            query += " AND featured = ?"
-            params.append(1 if featured else 0)
+            query += " AND ativo = 1"
 
         if search:
-            query += " AND (name LIKE ? OR sku LIKE ? OR description LIKE ?)"
+            query += " AND (nome LIKE ? OR sku LIKE ? OR local_fisico LIKE ?)"
             s = f"%{search}%"
             params.extend([s, s, s])
 
-        query += " ORDER BY featured DESC, id DESC"
+        query += " ORDER BY id DESC"
         rows = conn.execute(query, params).fetchall()
-        return [dict(r) for r in rows]
+        return [formatar_produto(dict(r)) for r in rows]
 
 @router.get("/products/{product_id}")
-def get_product(product_id: int):
+def obter_produto(product_id: int, loja_id: int = 1):
     with tx() as conn:
-        row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+        row = conn.execute("SELECT * FROM produto WHERE id = ? AND loja_id = ?", (product_id, loja_id)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Produto não encontrado")
-        return dict(row)
+        return formatar_produto(dict(row))
 
 @router.post("/products", status_code=201)
-def create_product(data: ProductCreate):
+def cadastrar_produto(data: ProdutoCreateIn, loja_id: int = 1):
     with tx() as conn:
-        # Pega o nome da categoria se fornecido apenas o id
-        cat_name = data.category_name
-        if data.category_id and not cat_name:
-            cat = conn.execute("SELECT name FROM categories WHERE id = ?", (data.category_id,)).fetchone()
-            if cat:
-                cat_name = cat["name"]
-
-        try:
-            cursor = conn.execute("""
-            INSERT INTO products 
-            (name, sku, category_id, category_name, description, price, promo_price, unit, min_quantity, box_quantity, stock, image_url, is_active, featured)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                data.name, data.sku, data.category_id, cat_name, data.description,
-                data.price, data.promo_price, data.unit, data.min_quantity, data.box_quantity,
-                data.stock, data.image_url, 1 if data.is_active else 0, 1 if data.featured else 0
-            ))
-            prod_id = cursor.lastrowid
-            
-            # Auditoria e Movimento inicial de Estoque
-            ctx = Ctx(loja_id=1)
-            if data.stock > 0:
-                registrar_movimento(conn, ctx, prod_id, None, "entrada", "entrada", data.stock, 0, data.stock)
-            
-            created = dict(conn.execute("SELECT * FROM products WHERE id = ?", (prod_id,)).fetchone())
-            auditar(conn, ctx, "produto", prod_id, "criar", None, created)
-            return created
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Erro ao criar produto: {e}")
+        ctx = Ctx(loja_id=loja_id)
+        d = {
+            "nome": data.nome,
+            "sku": data.sku or f"PAP-{data.nome[:4].upper()}",
+            "preco_centavos": int(round(data.preco * 100)),
+            "estoque_atual": data.estoque_atual,
+            "local_fisico": data.local_fisico,
+            "imagem_url": data.imagem_url
+        }
+        prod = criar_produto(conn, ctx, d)
+        return formatar_produto(prod)
 
 @router.put("/products/{product_id}")
-def update_product(product_id: int, data: ProductUpdate):
+def alterar_produto(product_id: int, data: ProdutoUpdateIn, loja_id: int = 1):
     with tx() as conn:
-        current = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
-        if not current:
-            raise HTTPException(status_code=404, detail="Produto não encontrado")
-        current_dict = dict(current)
+        ctx = Ctx(loja_id=loja_id)
+        campos = {}
+        if data.nome is not None: campos["nome"] = data.nome
+        if data.sku is not None: campos["sku"] = data.sku
+        if data.preco is not None: campos["preco_centavos"] = int(round(data.preco * 100))
+        if data.estoque_atual is not None: campos["estoque_atual"] = data.estoque_atual
+        if data.local_fisico is not None: campos["local_fisico"] = data.local_fisico
+        if data.imagem_url is not None: campos["imagem_url"] = data.imagem_url
+        if data.ativo is not None: campos["ativo"] = data.ativo
 
-        updates = {}
-        for field, value in data.model_dump(exclude_unset=True).items():
-            if field == "is_active":
-                updates["is_active"] = 1 if value else 0
-            elif field == "featured":
-                updates["featured"] = 1 if value else 0
-            else:
-                updates[field] = value
-
-        if data.category_id and not data.category_name:
-            cat = conn.execute("SELECT name FROM categories WHERE id = ?", (data.category_id,)).fetchone()
-            if cat:
-                updates["category_name"] = cat["name"]
-
-        if updates:
-            sets = ", ".join(f"{k} = ?" for k in updates.keys())
-            conn.execute(f"UPDATE products SET {sets} WHERE id = ?", (*updates.values(), product_id))
-
-        # Se houve alteração de estoque, registra movimento
-        ctx = Ctx(loja_id=1)
-        if "stock" in updates and updates["stock"] != current_dict["stock"]:
-            diff = updates["stock"] - current_dict["stock"]
-            direcao = "entrada" if diff > 0 else "saida"
-            registrar_movimento(conn, ctx, product_id, None, "ajuste", direcao, abs(diff), current_dict["stock"], updates["stock"])
-
-        after = dict(conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone())
-        auditar(conn, ctx, "produto", product_id, "atualizar", current_dict, after)
-        return after
+        prod = atualizar_produto(conn, ctx, product_id, campos)
+        return formatar_produto(prod)
 
 @router.delete("/products/{product_id}")
-def delete_product(product_id: int):
+def desativar_produto(product_id: int, loja_id: int = 1):
     with tx() as conn:
-        current = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
-        if not current:
-            raise HTTPException(status_code=404, detail="Produto não encontrado")
-        
-        # Soft delete desativando o produto
-        conn.execute("UPDATE products SET is_active = 0 WHERE id = ?", (product_id,))
-        ctx = Ctx(loja_id=1)
-        auditar(conn, ctx, "produto", product_id, "deletar_soft", dict(current), {"is_active": 0})
-        return {"success": True, "message": "Produto desativado com sucesso"}
+        ctx = Ctx(loja_id=loja_id)
+        prod = atualizar_produto(conn, ctx, product_id, {"ativo": 0})
+        return {"success": True, "message": "Produto desativado do catálogo"}

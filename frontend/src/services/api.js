@@ -34,13 +34,11 @@ async function request(endpoint, options = {}) {
 }
 
 export const api = {
-  // Produtos & Categorias
+  // Produtos & Categorias (Papelaria Física & Digital)
   getCategories: () => request('/categories'),
   getProducts: (params = {}) => {
     const query = new URLSearchParams();
-    if (params.category_id) query.append('category_id', params.category_id);
     if (params.search) query.append('search', params.search);
-    if (params.featured !== undefined) query.append('featured', params.featured);
     if (params.active_only !== undefined) query.append('active_only', params.active_only);
     const qs = query.toString();
     return request(`/products${qs ? '?' + qs : ''}`);
@@ -50,28 +48,11 @@ export const api = {
   updateProduct: (id, data) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
 
-  // Clientes
-  getCustomers: (search = '') => {
-    const query = search ? `?search=${encodeURIComponent(search)}` : '';
-    return request(`/customers${query}`);
-  },
-  getCustomer: (id) => request(`/customers/${id}`),
-  createCustomer: (data) => request('/customers', { method: 'POST', body: JSON.stringify(data) }),
-  updateCustomer: (id, data) => request(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-
-  // Vendedores
-  getSellers: (active_only = false) => request(`/sellers?active_only=${active_only}`),
-  getSeller: (id) => request(`/sellers/${id}`),
-  createSeller: (data) => request('/sellers', { method: 'POST', body: JSON.stringify(data) }),
-  updateSeller: (id, data) => request(`/sellers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-
-  // Pedidos
+  // Pedidos e Retirada na Loja Física
   getOrders: (params = {}) => {
     const query = new URLSearchParams();
     if (params.status && params.status !== 'ALL') query.append('status', params.status);
-    if (params.customer_id) query.append('customer_id', params.customer_id);
-    if (params.seller_id) query.append('seller_id', params.seller_id);
-    if (params.search) query.append('search', params.search);
+    if (params.codigo_retirada) query.append('codigo_retirada', params.codigo_retirada);
     const qs = query.toString();
     return request(`/orders${qs ? '?' + qs : ''}`);
   },
@@ -79,14 +60,27 @@ export const api = {
   createOrder: (data) => request('/orders', { method: 'POST', body: JSON.stringify(data) }),
   updateOrderStatus: (id, data) => request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
 
-  // Configurações & Cupons
-  getSettings: () => request('/settings'),
-  updateSettings: (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
-  validateCoupon: (code, subtotal) => request('/coupons/validate', {
+  // Operação de Balcão da Loja Física
+  registrarVendaBalcao: (items) => request('/balcao/venda', {
     method: 'POST',
-    body: JSON.stringify({ code, subtotal })
+    body: JSON.stringify({ items })
+  }),
+  concluirRetiradaBalcao: (codigo_retirada) => request('/balcao/retirar', {
+    method: 'POST',
+    body: JSON.stringify({ codigo_retirada })
   }),
 
-  // Dashboard & KPIs
+  // Orquestrador de Agentes de IA (Catálogo & Vendas por Mensagem)
+  orquestrarAgente: (data) => request('/agentes/orquestrar', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  // Configurações da Loja
+  getSettings: () => request('/settings'),
+  updateSettings: (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  getLojas: () => request('/lojas'),
+
+  // Métricas da Operação Local
   getDashboardMetrics: () => request('/dashboard/metrics')
 };

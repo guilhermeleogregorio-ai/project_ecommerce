@@ -26,12 +26,18 @@ def auditar(c, ctx, entidade, entidade_id, acao, antes=None, depois=None, detalh
               (ctx.loja_id, ctx.exec_id, ctx.cid, entidade, entidade_id, acao, _j(antes), _j(depois), detalhes,
                "agente" if ctx.exec_id else "usuario"))
 
-def executar(loja_id, agente, cid, solicitacao, fn, versao=None, modelo=None):
+def executar(loja_id, agente, cid, solicitacao, fn, versao="1.0", modelo="heuristico-v1"):
+    """
+    Execução de agentes de IA: registra a solicitação e o ciclo de vida.
+    Garante o status 'concluido' ou 'erro', respeitando a constraint CHECK do schema.sql.
+    """
     exec_id = None
     if agente:
         with tx() as c:
-            exec_id = c.execute("""INSERT INTO agente_execucao(loja_id,agente,versao_agente,modelo_ia,correlation_id,solicitacao)
-                VALUES(?,?,?,?,?,?)""", (loja_id, agente, versao, modelo, cid or secrets.token_hex(8), _j(solicitacao))).lastrowid
+            exec_id = c.execute("""
+                INSERT INTO agente_execucao(loja_id, agente, versao_agente, modelo_ia, correlation_id, solicitacao, status)
+                VALUES(?, ?, ?, ?, ?, ?, 'iniciado')
+            """, (loja_id, agente, versao, modelo, cid or secrets.token_hex(8), _j(solicitacao))).lastrowid
     try:
         with tx() as c:
             res = fn(c, Ctx(loja_id, exec_id, cid))
@@ -42,5 +48,7 @@ def executar(loja_id, agente, cid, solicitacao, fn, versao=None, modelo=None):
         raise
     if exec_id:
         with tx() as c:
-            c.execute("UPDATE agente_execucao SET status='sucesso', resultado=?, finalizado_em=? WHERE id=?", (_j(res), agora(), exec_id))
+            # Salva como 'concluido' respeitando o CHECK(status IN ('iniciado', 'concluido', 'erro'))
+            c.execute("UPDATE agente_execucao SET status='concluido', resultado=?, finalizado_em=? WHERE id=?",
+                      (_j(res), agora(), exec_id))
     return res

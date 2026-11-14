@@ -1,26 +1,48 @@
+import asyncio
 import os
 import sys
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-# Garante que o diretório backend esteja no sys.path
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database.connection import init_db
+from database.connection import init_db, tx
 from database.seed_data import seed
-from routes import products, customers, sellers, orders, settings, dashboard
+from models.core import Ctx
+from models.pedidos import expirar_pedidos
+from routes import products, orders, agentes, dashboard, settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 1. Executa schema.sql oficial do desafio
     init_db()
+    # 2. Popula dados reais da Papelaria Modelo (Tray Hackathon)
     seed()
+    
+    # 3. Rotina assíncrona periódica: libera reservas vencidas
+    async def rotina_expiracao():
+        while True:
+            await asyncio.sleep(60)
+            try:
+                with tx() as conn:
+                    expirar_pedidos(conn, Ctx(loja_id=1))
+            except Exception:
+                pass
+                
+    tarefa = asyncio.create_task(rotina_expiracao())
     yield
+    tarefa.cancel()
 
-app = FastAPI(title="Salesdrive Varejo Local API", lifespan=lifespan)
+app = FastAPI(
+    title="Tray - Varejo Local Inteligente API",
+    description="Backend oficial focado na primeira venda digital do varejo físico, rotina do balcão e agentes de IA",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,17 +52,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Registra todos os módulos de rotas sob o prefixo /api
+# Rotas sob o prefixo /api
 app.include_router(products.router, prefix="/api")
-app.include_router(customers.router, prefix="/api")
-app.include_router(sellers.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
-app.include_router(settings.router, prefix="/api")
+app.include_router(agentes.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
+app.include_router(settings.router, prefix="/api")
 
 @app.get("/")
-def root():
-    return {"status": "online", "message": "API Salesdrive Varejo Local operacional", "docs": "/docs"}
+def raiz():
+    return {
+        "status": "online",
+        "projeto": "Tray E-commerce - Desafio Varejo Local",
+        "empresa": "Papelaria & Bazar Central",
+        "documentacao": "/docs"
+    }
 
 if __name__ == "__main__":
     import uvicorn

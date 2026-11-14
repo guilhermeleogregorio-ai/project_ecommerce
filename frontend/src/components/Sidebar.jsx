@@ -1,101 +1,98 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
+  Store, 
+  Bot, 
   Package, 
-  ShoppingBag, 
-  Users, 
-  UserCheck, 
   Settings, 
-  Store,
-  ChevronRight,
-  TrendingUp
+  LayoutDashboard, 
+  Sparkles,
+  HelpCircle
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const links = [
+  const menuItems = [
     {
-      group: 'Visão Geral & Catálogo',
-      items: [
-        { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard Executivo' },
-        { to: '/admin/products', icon: Package, label: 'Gestão de Produtos' },
-      ]
+      label: 'Rotina do Balcão & Retiradas',
+      path: '/commercial/orders',
+      icon: Store,
+      badge: 'Loja Física'
     },
     {
-      group: 'Operação Comercial',
-      items: [
-        { to: '/commercial/orders', icon: ShoppingBag, label: 'Gestão de Pedidos' },
-        { to: '/commercial/customers', icon: Users, label: 'Carteira de Clientes' },
-        { to: '/commercial/sellers', icon: UserCheck, label: 'Força de Vendas' },
-      ]
+      label: 'Agentes de IA (Orquestrador)',
+      path: '/commercial/customers',
+      icon: Bot,
+      badge: 'Catálogo & Vendas'
     },
     {
-      group: 'Sistema',
-      items: [
-        { to: '/admin/settings', icon: Settings, label: 'Configurações da Loja' },
-      ]
+      label: 'Catálogo de Produtos',
+      path: '/admin/products',
+      icon: Package
+    },
+    {
+      label: 'Resumo Operacional & Alertas',
+      path: '/admin/dashboard',
+      icon: LayoutDashboard
+    },
+    {
+      label: 'Configurações da Loja',
+      path: '/admin/settings',
+      icon: Settings
     }
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 min-h-[calc(100vh-4rem)] flex flex-col justify-between p-4 border-r border-slate-800">
+    <aside className="w-64 bg-white border-r border-slate-200/80 min-h-[calc(100vh-4.5rem)] p-4 flex flex-col justify-between hidden md:flex">
       <div className="space-y-6">
-        {/* Banner do Módulo Admin */}
-        <div className="px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-white">Salesdrive Hub</p>
-              <p className="text-[10px] text-slate-400">Ambiente Administrativo</p>
-            </div>
-          </div>
+        <div>
+          <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3">
+            Operação da Loja Física
+          </span>
+          <nav className="mt-2 space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      isActive
+                        ? 'bg-brand-50 text-brand-700 shadow-sm border border-brand-200/60'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4 text-brand-600" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className="text-[9px] bg-brand-100/70 text-brand-800 px-1.5 py-0.5 rounded-md font-bold">
+                      {item.badge}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Grupos de Menu */}
-        <nav className="space-y-6">
-          {links.map((section, idx) => (
-            <div key={idx} className="space-y-1.5">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                {section.group}
-              </p>
-              {section.items.map((item, itemIdx) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={itemIdx}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                        isActive
-                          ? 'bg-brand-600 text-white shadow-sm font-semibold'
-                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                      }`
-                    }
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-                  </NavLink>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
+        {/* Card Informativo do Desafio Tray */}
+        <div className="p-3.5 bg-gradient-to-br from-indigo-50 to-brand-50 border border-brand-200/60 rounded-2xl">
+          <div className="flex items-center gap-2 text-brand-900 font-bold text-xs">
+            <Sparkles className="w-4 h-4 text-brand-600" />
+            <span>Desafio Tray Varejo</span>
+          </div>
+          <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+            Eliminando o atrito da primeira venda digital sem atrapalhar a rotina do lojista físico.
+          </p>
+        </div>
       </div>
 
-      {/* Atalho para Loja Virtual */}
-      <div className="pt-4 border-t border-slate-800">
-        <Link
-          to="/store/catalog"
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-brand-600 text-white text-xs font-medium transition-all group"
-        >
-          <Store className="w-4 h-4 text-brand-400 group-hover:text-white" />
-          <span>Ver Loja do Comprador</span>
-        </Link>
+      <div className="border-t border-slate-100 pt-3 px-2 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>Papelaria Modelo (Tray)</span>
+        <span className="font-mono text-[10px]">v2.0</span>
       </div>
     </aside>
   );

@@ -1,127 +1,89 @@
-# Salesdrive MVP — Plataforma B2B & E-commerce para Varejistas Locais
-
-> "Plataforma simplificada de e-commerce e força de vendas para ajudar pequenos varejistas locais a realizar sua primeira venda online sem atrapalhar a rotina da loja física."
-
-Inspirado no modelo de sucesso da **Salesdrive (da Salespace Tecnologia)**, este projeto conecta distribuidoras, indústrias, representantes comerciais de campo e pequenos comerciantes (mercearias, padarias, minimercados e empórios) em um ecossistema digital unificado.
+# Tray E-commerce — Desafio Varejo Local Inteligente
+> **Facilitando a primeira venda digital na rotina da loja física através de agentes de IA e sincronização atômica de balcão.**
 
 ---
 
-## 🚀 Como Executar o Projeto Rapidamente
+## 🎯 1. Contexto e Apresentação do Desafio (Tray)
+Nascida em Marília/SP, a **Tray** impulsiona o e-commerce brasileiro há mais de 23 anos. O desafio proposto é:  
+> *"Investigue o que adia a primeira venda digital no varejo tradicional e explore como a tecnologia pode facilitar esse primeiro passo na rotina da loja física."*
 
-### 1. Inicialização em Um Clique (Windows)
-Basta clicar duas vezes no arquivo:
+---
+
+## 🔍 2. Barreira Investigada e Dados Públicos
+
+### O Problema Real do Lojista Físico:
+A maior barreira que adia a primeira venda digital do pequeno comerciante de bairro (ex: papelarias, bazares, pet shops) **não é a falta de canais, mas o medo do atrito na rotina da loja física**:
+1. **Ruptura de Estoque / Venda Duplicada:** O atendente teme vender o último caderno no balcão presencial enquanto um cliente compra o mesmo item pela internet.
+2. **Interrupção do Atendimento Presencial:** O atendente de balcão precisa parar de atender o cliente na loja física para ir até a prateleira conferir se há um item para quem mandou mensagem no WhatsApp.
+3. **Complexidade Operacional:** Sistemas tradicionais de e-commerce exigem cadastros longos, painéis pesados de atacado/B2B e rotinas complexas que não cabem no dia a dia enxuto do pequeno varejo.
+
+### Dados Oficiais (Cetic.br — TIC Empresas 2025):
+- **81%** dos pequenos varejistas que vendem pela internet utilizam **mensagens ou chats (ex: WhatsApp)**.
+- Apenas **30%** possuem **site próprio**.
+- **Conclusão:** O lojista já recebe pedidos por mensagens, mas os trata de forma manual, desestruturada e com alto risco de errar o estoque do balcão.
+
+---
+
+## 💡 3. A Solução Proposta
+
+Desenvolvemos uma plataforma pensada **de dentro para fora da loja física**, tendo como cenário prático a **Papelaria & Bazar Central**:
+
+### 🛡️ A. Sincronização e Reserva Atômica de Estoque (`tx()` + WAL)
+- Quando o consumidor compra online, o estoque entra em **`estoque_reservado`** e gera um **código de retirada de 6 dígitos**.
+- A venda presencial de balcão confere o **saldo livre (`estoque_atual - estoque_reservado`)**, impedindo venda duplicada do último produto.
+- Ao retirar no balcão, a entrega é confirmada pelo código e o estoque é baixado em definitivo.
+- Se o cliente online não pagar ou não retirar no prazo configurado (ex: 2 horas), o sistema **libera a reserva automaticamente**.
+
+### 🤖 B. Orquestrador de Agentes de IA (`/api/agentes/orquestrar`)
+Dois agentes especializados concebidos sob o princípio da **Autonomia com Confirmação Humana**:
+1. **Agente de Catálogo (Consulta & Cadastro Guiado):**
+   - **Consulta de Balcão:** O atendente pergunta *"Tem caderno 10 matérias?"* ou *"Onde fica a caneta BIC azul?"* e a IA responde instantaneamente com saldo livre, total físico e localização exata na loja física (ex: *Prateleira A1*).
+   - **Cadastro por Linguagem Natural:** O lojista dita *"Cadastrar Caderno Espiral por 24,90 com 30 unidades na Prateleira A1"*. O agente estrutura os atributos e **apresenta uma proposta para o lojista confirmar com 1 clique**.
+2. **Agente de Vendas por Mensagem:**
+   - O atendente cola mensagens do WhatsApp (*"Reserva 2 cadernos 10 matérias e 1 resma de sulfite para eu retirar hoje"*).
+   - O agente interpreta a mensagem, reserva os produtos atomicamente e gera o código de retirada para envio ao cliente.
+
+### 🏢 C. Adaptabilidade a Outros Segmentos (Multi-Loja)
+- Todas as tabelas do banco de dados (`loja`, `usuario`, `produto`, `pedido`, `movimento_estoque`, `auditoria_evento`, `agente_execucao`) possuem isolamento por **`loja_id`**.
+- O seed do sistema inclui **Papelaria & Bazar Central (`loja_id=1`)** e **Pet & Rações do Bairro (`loja_id=2`)**, demonstrando como a mesma tecnologia atende diferentes ramos do comércio tradicional.
+
+---
+
+## 🧪 4. Hipóteses Validadas e Próximos Passos com Lojistas
+
+| Hipótese | Status no Protótipo | O que ainda precisa ser testado em campo |
+| :--- | :--- | :--- |
+| **H1: A retirada na loja reduz o custo e viabiliza a 1ª venda** | ✅ Validada com código de retirada e reserva | Medir a taxa de comparecimento do cliente no balcão físico em 24h. |
+| **H2: A IA reduz o tempo de cadastro de produtos** | ✅ Validada com o Agente de Catálogo | Testar o cadastro com foto de etiqueta de preço direto pelo celular. |
+| **H3: Converter WhatsApp em pedido reduz perdas de estoque** | ✅ Validada com o Agente de Vendas | Integrar a API do WhatsApp Business para pré-reserva automatizada. |
+| **H4: O lojista confia mais quando a IA propõe e ele confirma** | ✅ Validada na interface com botão de aprovação | Acompanhar a curva de aprendizado do comerciante na primeira semana de uso. |
+
+---
+
+## 🚀 5. Como Executar o Projeto Rapidamente
+
+### Em Um Clique (Windows):
+Basta clicar duas vezes em:
 ```cmd
 start_dev.bat
 ```
-Ou executar no PowerShell:
-```powershell
-.\start_dev.ps1
-```
+O script abre automaticamente o **Backend FastAPI** na porta `8000` e o **Frontend React** na porta `3000`.
 
-### 2. Inicialização Manual
-
-#### Backend (FastAPI + SQLite)
+### Execução Manual:
+#### Backend:
 ```bash
-# Na raiz do projeto:
 pip install -r backend/requirements.txt
 python backend/main.py
 ```
-* **API REST**: [http://localhost:8000](http://localhost:8000)
-* **Documentação Swagger Interativa**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- API REST: [http://localhost:8000](http://localhost:8000)
+- Swagger Interativo: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-#### Frontend (React + Vite + Tailwind CSS)
+#### Frontend:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-* **Loja Virtual & Portal**: [http://localhost:3000](http://localhost:3000)
-
----
-
-## 🌟 Funcionalidades Implementadas
-
-### 🛒 Área do Comprador / Varejista (Storefront & Checkout)
-1. **Vitrine & Home Comercial (`/store/home` ou `/`)**:
-   - Hero com proposta de valor da plataforma e micro-vantagens para o comerciante.
-   - Categorias rápidas (Bebidas, Alimentos, Higiene, Limpeza, Doces).
-   - Vitrine de produtos em destaque e fardos de alto giro.
-   - Banner de suporte para solicitação de visita de representante presencial.
-
-2. **Catálogo Interativo de Atacado (`/store/catalog`)**:
-   - Filtros dinâmicos por categoria, busca textual em tempo real e filtro de itens em estoque.
-   - Ordenação inteligente por relevância, menor preço, maior preço e ordem alfabética.
-   - Cards com cálculo de preço por caixa/fardo e equivalência fracionada por unidade.
-   - Controles de quantidade respeitando pedido mínimo de cada produto.
-
-3. **Ficha Técnica do Produto (`/store/product/:id`)**:
-   - Galeria de imagens em alta definição.
-   - Especificação de embalagem (fardo, caixa fechada, display).
-   - Tabela de desconto progressivo por volume de compra (B2B).
-   - Simulador de frete e prazos por CEP.
-
-4. **Carrinho com Validação de Pedido Mínimo (`/store/cart`)**:
-   - Barra de progresso visual do pedido mínimo (R$ 150,00).
-   - Aplicação de cupons de desconto (`PRIMEIRACOMPRA`, `SALESDRIVE5`, `FRETEGRATIS`).
-   - Resumo dinâmico de frete, descontos e total faturado.
-
-5. **Fluxo de Checkout em 3 Etapas**:
-   - **Etapa 1 - Identificação (`/checkout/account`)**: Cadastro rápido de CNPJ/Razão Social com botão de preenchimento de teste rápido (ideal para banca avaliadora).
-   - **Etapa 2 - Campanha & Força de Vendas (`/checkout/marketing`)**: Atribuição do pedido a um representante comercial específico (ex: Carlos, Mariana, Rodrigo) para comissionamento, cupons e observações de entrega.
-   - **Etapa 3 - Pagamento & Emissão (`/checkout/payment`)**: Modalidades de pagamento:
-     - **PIX**: 5% de desconto automático, QR Code gerado e chave copia-e-cola.
-     - **Boleto Faturado**: Prazo de 30 dias para lojistas cadastrados.
-     - **Cartão de Crédito**: Até 12x para empresas.
-   - **Tela de Sucesso**: Geração de código de pedido único rastreável (ex: `SD-2026-XXXXX`).
-
----
-
-### 💼 Painel Administrativo & Gestão Comercial
-
-1. **Dashboard Executivo (`/admin/dashboard`)**:
-   - KPIs em tempo real: Faturamento Total, Volume de Pedidos, Ticket Médio e Varejistas Ativos.
-   - Gráfico de evolução diária de vendas (últimos 7 dias).
-   - Top 5 produtos campeões de vendas em receita e volume.
-   - Alertas de giro crítico de estoque em depósito.
-   - Desempenho e progresso das metas da equipe de vendas.
-
-2. **Gestão de Produtos & Estoque (`/admin/products`)**:
-   - Cadastro, edição e desativação de itens do catálogo.
-   - Controle de saldos em estoque, unidades de medida e quantidades por embalagem.
-   - Configuração de preços normais e promocionais.
-
-3. **Gestão Operacional de Pedidos (`/commercial/orders`)**:
-   - Listagem com filtros por status (`Pendente`, `Em Separação`, `Faturado`, `Entregue`, `Cancelado`).
-   - Modal com espelho completo do pedido (itens, dados do cliente, vendedor e valores).
-   - Alteração do status do ciclo de vida do pedido com persistência imediata.
-   - Impressão de espelho para separação em expedição.
-
-4. **Carteira de Clientes Varejistas (`/commercial/customers`)**:
-   - Listagem e cadastro de lojistas locais com CNPJ, endereço e telefone.
-   - Controle e barra de limite de crédito utilizado e disponível para faturamento a prazo.
-
-5. **Força de Vendas & Representantes (`/commercial/sellers`)**:
-   - Cadastro de representantes externos com código único e região.
-   - Acompanhamento de metas mensais e cálculo automático de comissões.
-   - Geração de link de vendedor para comissionamento automático de vendas online.
-
-6. **Configurações Gerais da Loja (`/admin/settings`)**:
-   - Parâmetros operacionais: valor mínimo de pedido, desconto para pagamento à vista no PIX, prazo padrão de boleto e frete cortesia.
-
----
-
-## 🛠️ Tecnologias Utilizadas
-
-* **Frontend**: React 19, Vite, Tailwind CSS, Lucide React, React Router v7.
-* **Backend**: Python 3.12, FastAPI, Pydantic v2, Uvicorn.
-* **Banco de Dados**: SQLite3 (banco relacional local persistido em `backend/database/ecommerce.db` com inicialização e seeds automáticos).
-
----
-
-## 🎯 Dados de Demonstração (Seed)
-
-O banco já vem pré-populado com:
-* **Produtos reais de atacado e distribuição**: Coca-Cola 2L (FD c/ 6), Heineken (PK c/ 12), Arroz Camil 5kg (FD c/ 6), Sabão OMO 1.6kg, Chocolates Bis, etc.
-* **Vendedores cadastrados**: Carlos Eduardo (REP-101), Mariana Oliveira (REP-102), Rodrigo Silveira (REP-103).
-* **Varejistas locais cadastrados**: Supermercado Bom Preço, Panificadora Estrela D'Alva, Empório da Esquina, Mini Mercado São Jorge.
-* **Histórico de pedidos em diferentes etapas operacionais**: para enriquecer gráficos e testes de ponta a ponta.
+- Loja & Balcão Físico: [http://localhost:3000](http://localhost:3000)
+- Operação de Balcão & Retiradas: [http://localhost:3000/commercial/orders](http://localhost:3000/commercial/orders)
+- Orquestrador de Agentes de IA: [http://localhost:3000/commercial/customers](http://localhost:3000/commercial/customers)

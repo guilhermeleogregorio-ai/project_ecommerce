@@ -14,13 +14,11 @@ import StoreCart from './pages/store/cart';
 
 // Checkout Pages
 import CheckoutAccount from './pages/checkout/account';
-import CheckoutMarketing from './pages/checkout/marketing';
 import CheckoutPayment from './pages/checkout/payment';
 
-// Commercial Pages
-import CommercialOrders from './pages/commercial/orders';
-import CommercialCustomers from './pages/commercial/customers';
-import CommercialSellers from './pages/commercial/sellers';
+// Operação da Loja Física e Balcão
+import BalcaoOperacao from './pages/commercial/orders';
+import AssistenteIA from './pages/commercial/customers';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/dashboard';
@@ -31,9 +29,10 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const location = useLocation();
 
-  const isAdminOrCommercial = 
+  const isPainelLojista = 
     location.pathname.startsWith('/admin') || 
-    location.pathname.startsWith('/commercial');
+    location.pathname.startsWith('/commercial') ||
+    location.pathname.startsWith('/balcao');
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-brand-500 selection:text-white">
@@ -44,17 +43,26 @@ export default function App() {
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
       {/* Main Content Area */}
-      {isAdminOrCommercial ? (
+      {isPainelLojista ? (
         <div className="flex-1 flex">
           <Sidebar />
           <main className="flex-1 p-6 sm:p-8 max-w-7xl mx-auto w-full">
             <Routes>
+              {/* Painel do Balcão e Retirada */}
+              <Route path="/commercial/orders" element={<BalcaoOperacao />} />
+              <Route path="/balcao" element={<Navigate to="/commercial/orders" replace />} />
+              
+              {/* Assistente de IA / Orquestrador */}
+              <Route path="/commercial/customers" element={<AssistenteIA />} />
+              <Route path="/agentes" element={<Navigate to="/commercial/customers" replace />} />
+
+              {/* Redirecionamento de rotas legadas para telas do desafio */}
+              <Route path="/commercial/sellers" element={<Navigate to="/commercial/orders" replace />} />
+
+              {/* Gestão e Catálogo */}
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/products" element={<AdminProducts />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/commercial/orders" element={<CommercialOrders />} />
-              <Route path="/commercial/customers" element={<CommercialCustomers />} />
-              <Route path="/commercial/sellers" element={<CommercialSellers />} />
             </Routes>
           </main>
         </div>
@@ -69,9 +77,9 @@ export default function App() {
               <Route path="/store/product/:id" element={<StoreProductDetail />} />
               <Route path="/store/cart" element={<StoreCart />} />
 
-              {/* Checkout */}
+              {/* Checkout Simples com Retirada */}
               <Route path="/checkout/account" element={<CheckoutAccount />} />
-              <Route path="/checkout/marketing" element={<CheckoutMarketing />} />
+              <Route path="/checkout/marketing" element={<Navigate to="/checkout/payment" replace />} />
               <Route path="/checkout/payment" element={<CheckoutPayment />} />
 
               {/* Fallback */}
