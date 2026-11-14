@@ -48,3 +48,17 @@ def confirmar_pedido(c, ctx, pedido_id):
     c.execute("UPDATE pedido SET status='confirmado',confirmado_em=?,atualizado_em=? WHERE id=?", (agora(), agora(), pedido_id))
     auditar(c, ctx, "pedido", pedido_id, "confirmar", {"status": "aguardando_pagamento"}, {"status": "confirmado"})
     return {"id": pedido_id, "status": "confirmado"}
+
+def retirar_pedido(c, ctx, pedido_id):
+    p = _pedido(c, ctx, pedido_id, ("confirmado", "pronto"))
+    rows = c.execute("""SELECT r.id rid, r.quantidade q, i.produto_id pid FROM reserva_estoque r
+        JOIN pedido_item i ON i.id=r.pedido_item_id WHERE i.pedido_id=? AND r.status='ativa'""", (pedido_id,)).fetchall()
+    for r in rows:
+        antes = c.execute("SELECT estoque_atual FROM produto WHERE id=?", (r["pid"],)).fetchone()[0]
+        c.execute("UPDATE produto SET estoque_atual=estoque_atual-?,estoque_reservado=estoque_reservado-?,atualizado_em=? WHERE id=?",
+                  (r["q"], r["q"], agora(), r["pid"]))
+        registrar_movimento(c, ctx, r["pid"], pedido_id, "venda", "saida", r["q"], antes, antes - r["q"])
+        c.execute("UPDATE reserva_estoque SET status='consumida',finalizada_em=? WHERE id=?", (agora(), r["rid"]))
+    c.execute("UPDATE pedido SET status='retirado',retirado_em=?,atualizado_em=? WHERE id=?", (agora(), agora(), pedido_id))
+    auditar(c, ctx, "pedido", pedido_id, "retirar", {"status": p["status"]}, {"status": "retirado"})
+    return {"id": pedido_id, "status": "retirado"}
