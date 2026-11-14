@@ -1,0 +1,11 @@
+import json,secrets
+from dataclasses import dataclass
+from datetime import datetime,timedelta,timezone
+from database.connection import tx
+
+def agora(min = 0):
+    return (datetime.now(timezone.utc) + timedelta(minutes=min)).strftime("%Y-%m-%dT%H:%M:%Z")
+
+class ErroNegocio(Exception):
+    def __int__(self, msg ,status = 400):
+        super().__init__(msg); self.status = status
