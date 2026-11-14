@@ -1,6 +1,28 @@
-__pycache__/
+# Database
 *.db
 *.db-wal
 *.db-shm
+*.sqlite3
+*.db-journal
+backend/database/*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
 .venv/
+venv/
+ENV/
+
+# Node
 node_modules/
+dist/
+dist-ssr/
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
