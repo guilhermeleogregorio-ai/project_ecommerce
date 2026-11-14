@@ -1,20 +1,58 @@
-﻿# Script de Inicialização Rápida para o MVP Salesdrive
-Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "       Salesdrive MVP - Inicializando Servicos     " -ForegroundColor Cyan
-Write-Host "===================================================" -ForegroundColor Cyan
+﻿# Script de Inicializacao do MVP Salesdrive
+# Execute com: powershell -ExecutionPolicy Bypass -File start_dev.ps1
 
-# Atualiza PATH com os executáveis do usuário caso necessário
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","User") + ";" + [System.Environment]::GetEnvironmentVariable("Path","Machine")
+Write-Host "========================================================" -ForegroundColor Cyan
+Write-Host "       SALESDRIVE MVP - Iniciando Servicos              " -ForegroundColor Cyan
+Write-Host "========================================================" -ForegroundColor Cyan
+Write-Host ""
 
-# Inicia Backend em segundo plano
-Write-Host "[1/2] Iniciando Backend FastAPI (http://localhost:8000)..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "python backend/main.py"
+# Garante que o Node.js esta no PATH
+$nodePath = "C:\Program Files\nodejs"
+if (Test-Path $nodePath) {
+    $env:PATH = "$nodePath;$env:PATH"
+    Write-Host "[OK] Node.js encontrado em $nodePath" -ForegroundColor Green
+} else {
+    Write-Host "[ERRO] Node.js nao encontrado! Instale em https://nodejs.org" -ForegroundColor Red
+    Read-Host "Pressione Enter para sair"
+    exit 1
+}
 
-# Inicia Frontend
-Write-Host "[2/2] Iniciando Frontend React/Vite (http://localhost:3000)..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; npm.cmd run dev"
+# Verifica Python
+try {
+    $pyVersion = python --version 2>&1
+    Write-Host "[OK] $pyVersion detectado" -ForegroundColor Green
+} catch {
+    Write-Host "[ERRO] Python nao encontrado! Instale em https://python.org" -ForegroundColor Red
+    Read-Host "Pressione Enter para sair"
+    exit 1
+}
 
-Write-Host "Ambiente pronto!" -ForegroundColor Yellow
-Write-Host "Acesse a Loja do Comprador em: http://localhost:3000" -ForegroundColor White
-Write-Host "Acesse o Painel Administrativo em: http://localhost:3000/admin/dashboard" -ForegroundColor White
-Write-Host "Documentacao interativa da API: http://localhost:8000/docs" -ForegroundColor White
+$rootDir = $PSScriptRoot
+
+# Inicia Backend
+Write-Host ""
+Write-Host "[1/2] Iniciando Backend FastAPI (porta 8000)..." -ForegroundColor Yellow
+$backendCmd = "cd '$rootDir'; python backend/main.py; Read-Host 'Backend encerrado. Pressione Enter para fechar'"
+Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $backendCmd
+
+# Aguarda backend inicializar
+Write-Host "      Aguardando 3 segundos para o backend subir..." -ForegroundColor Gray
+Start-Sleep -Seconds 3
+
+# Inicia Frontend usando node diretamente (evita problema com .ps1 bloqueado)
+Write-Host "[2/2] Iniciando Frontend React/Vite (porta 3000)..." -ForegroundColor Yellow
+$npmCli = "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"
+$frontendCmd = "cd '$rootDir\frontend'; node '$npmCli' run dev; Read-Host 'Frontend encerrado. Pressione Enter para fechar'"
+Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $frontendCmd
+
+Write-Host ""
+Write-Host "========================================================" -ForegroundColor Cyan
+Write-Host " Ambiente iniciado! Aguarde as janelas carregarem..." -ForegroundColor Green
+Write-Host ""
+Write-Host "   Loja Virtual:    http://localhost:3000" -ForegroundColor White
+Write-Host "   Trafego Google:  http://localhost:3000/marketing/google-traffic" -ForegroundColor White
+Write-Host "   Painel Admin:    http://localhost:3000/admin/dashboard" -ForegroundColor White
+Write-Host "   API (Swagger):   http://localhost:8000/docs" -ForegroundColor White
+Write-Host "========================================================" -ForegroundColor Cyan
+Write-Host ""
+Read-Host "Pressione Enter para fechar esta janela"
