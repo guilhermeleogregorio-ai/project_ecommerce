@@ -14,55 +14,70 @@ import StoreCart from './pages/store/cart';
 
 // Checkout Pages
 import CheckoutAccount from './pages/checkout/account';
+import CheckoutMarketing from './pages/checkout/marketing';
 import CheckoutPayment from './pages/checkout/payment';
 
-// Operação da Loja Física e Balcão
-import BalcaoOperacao from './pages/commercial/orders';
-import AssistenteIA from './pages/commercial/customers';
+// Commercial Pages
+import CommercialOrders from './pages/commercial/orders';
+import CommercialCustomers from './pages/commercial/customers';
+import CommercialSellers from './pages/commercial/sellers';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/dashboard';
 import AdminProducts from './pages/admin/products';
 import AdminSettings from './pages/admin/settings';
 
+// Google Paid Traffic Feature Page (Inspired by Google Gemini)
+import GoogleTrafficPage from './pages/marketing/google-traffic';
+
 export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const location = useLocation();
 
-  const isPainelLojista = 
+  const isAdminOrCommercial = 
     location.pathname.startsWith('/admin') || 
     location.pathname.startsWith('/commercial') ||
-    location.pathname.startsWith('/balcao');
+    location.pathname.startsWith('/marketing');
+
+  const isGoogleTrafficPage =
+    location.pathname.startsWith('/marketing') ||
+    location.pathname.startsWith('/google-ads');
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-brand-500 selection:text-white">
-      {/* Top Navbar */}
-      <Navbar onOpenCart={() => setIsCartOpen(true)} />
+    <div className={`min-h-screen flex flex-col selection:bg-blue-600 selection:text-white ${
+      isGoogleTrafficPage ? 'bg-[#131314]' : 'bg-slate-50'
+    }`}>
+      {/* Top Navbar (apenas quando não estiver na experiência imersiva Google Traffic) */}
+      {!isGoogleTrafficPage && (
+        <Navbar onOpenCart={() => setIsCartOpen(true)} />
+      )}
 
       {/* Slide-over Cart Drawer */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
       {/* Main Content Area */}
-      {isPainelLojista ? (
+      {isGoogleTrafficPage ? (
+        <div className="flex-1 flex">
+          <Sidebar />
+          <main className="flex-1 w-full overflow-auto">
+            <Routes>
+              <Route path="/marketing/google-traffic" element={<GoogleTrafficPage />} />
+              <Route path="/marketing" element={<Navigate to="/marketing/google-traffic" replace />} />
+              <Route path="/google-ads" element={<Navigate to="/marketing/google-traffic" replace />} />
+            </Routes>
+          </main>
+        </div>
+      ) : isAdminOrCommercial ? (
         <div className="flex-1 flex">
           <Sidebar />
           <main className="flex-1 p-6 sm:p-8 max-w-7xl mx-auto w-full">
             <Routes>
-              {/* Painel do Balcão e Retirada */}
-              <Route path="/commercial/orders" element={<BalcaoOperacao />} />
-              <Route path="/balcao" element={<Navigate to="/commercial/orders" replace />} />
-              
-              {/* Assistente de IA / Orquestrador */}
-              <Route path="/commercial/customers" element={<AssistenteIA />} />
-              <Route path="/agentes" element={<Navigate to="/commercial/customers" replace />} />
-
-              {/* Redirecionamento de rotas legadas para telas do desafio */}
-              <Route path="/commercial/sellers" element={<Navigate to="/commercial/orders" replace />} />
-
-              {/* Gestão e Catálogo */}
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/products" element={<AdminProducts />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/commercial/orders" element={<CommercialOrders />} />
+              <Route path="/commercial/customers" element={<CommercialCustomers />} />
+              <Route path="/commercial/sellers" element={<CommercialSellers />} />
             </Routes>
           </main>
         </div>
@@ -77,9 +92,9 @@ export default function App() {
               <Route path="/store/product/:id" element={<StoreProductDetail />} />
               <Route path="/store/cart" element={<StoreCart />} />
 
-              {/* Checkout Simples com Retirada */}
+              {/* Checkout */}
               <Route path="/checkout/account" element={<CheckoutAccount />} />
-              <Route path="/checkout/marketing" element={<Navigate to="/checkout/payment" replace />} />
+              <Route path="/checkout/marketing" element={<CheckoutMarketing />} />
               <Route path="/checkout/payment" element={<CheckoutPayment />} />
 
               {/* Fallback */}
