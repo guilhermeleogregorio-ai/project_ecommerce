@@ -9,3 +9,10 @@ def agora(min = 0):
 class ErroNegocio(Exception):
     def __int__(self, msg ,status = 400):
         super().__init__(msg); self.status = status
+
+@dataclass
+class Ctx:
+    loja_id: int
+    exec_id: int | None = None
+    cid: str | None = None
+    
