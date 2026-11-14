@@ -15,4 +15,7 @@ class Ctx:
     loja_id: int
     exec_id: int | None = None
     cid: str | None = None
-    
+
+def _j(x):
+    return None if x is None else json.dumps(x, ensure_ascii=False)
+
