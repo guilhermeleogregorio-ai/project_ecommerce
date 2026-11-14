@@ -14,4 +14,9 @@ def connect():
 
 
 def init_db():
+    c = connect()
+    if not c.execute("SELECT 1 FROM sqlite_master WHERE name='loja'").fetchone():
+        c.executescript(open(SCHEMA, encoding="utf-8").read())
+    c.close()
 
+    
