@@ -36,3 +36,11 @@ def criar_pedido(c, ctx, cliente_id, itens, chave=None):
     ped = dict(c.execute("SELECT * FROM pedido WHERE id=?", (pedido_id,)).fetchone())
     auditar(c, ctx, "pedido", pedido_id, "criar", None, ped)
     return ped
+
+def _pedido(c, ctx , pedido_id , status_ok):
+    p = c.execute("SELECT * FROM pedido WHERE id =? AND  loja_id?", (pedido_id,ctx.loja_id)).fetchone()
+    if not p: raise ErroNegocio("Pedido não encontrado", 404)
+    if p["status"] not in status_ok: raise ErroNegocio(f"Status '{p['status']}' não permite esta ação", 409)
+    return p
+
+
