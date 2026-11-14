@@ -43,4 +43,8 @@ def _pedido(c, ctx , pedido_id , status_ok):
     if p["status"] not in status_ok: raise ErroNegocio(f"Status '{p['status']}' não permite esta ação", 409)
     return p
 
-
+def confirmar_pedido(c, ctx, pedido_id):
+    _pedido(c, ctx, pedido_id, ("aguardando_pagamento",))
+    c.execute("UPDATE pedido SET status='confirmado',confirmado_em=?,atualizado_em=? WHERE id=?", (agora(), agora(), pedido_id))
+    auditar(c, ctx, "pedido", pedido_id, "confirmar", {"status": "aguardando_pagamento"}, {"status": "confirmado"})
+    return {"id": pedido_id, "status": "confirmado"}
