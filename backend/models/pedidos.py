@@ -62,3 +62,15 @@ def retirar_pedido(c, ctx, pedido_id):
     c.execute("UPDATE pedido SET status='retirado',retirado_em=?,atualizado_em=? WHERE id=?", (agora(), agora(), pedido_id))
     auditar(c, ctx, "pedido", pedido_id, "retirar", {"status": p["status"]}, {"status": "retirado"})
     return {"id": pedido_id, "status": "retirado"}
+
+def expirar_pedidos(c, ctx):
+    """Rodar a cada minuto: libera reservas de pedidos não pagos vencidos."""
+    venc = c.execute("SELECT id,loja_id FROM pedido WHERE status='aguardando_pagamento' AND expira_em<?", (agora(),)).fetchall()
+    for pid, loja in venc:
+        for r in c.execute("""SELECT r.id rid,r.quantidade q,i.produto_id prod FROM reserva_estoque r
+                JOIN pedido_item i ON i.id=r.pedido_item_id WHERE i.pedido_id=? AND r.status='ativa'""", (pid,)).fetchall():
+            c.execute("UPDATE produto SET estoque_reservado=estoque_reservado-? WHERE id=?", (r["q"], r["prod"]))
+            c.execute("UPDATE reserva_estoque SET status='expirada',finalizada_em=? WHERE id=?", (agora(), r["rid"]))
+        c.execute("UPDATE pedido SET status='expirado',atualizado_em=? WHERE id=?", (agora(), pid))
+        auditar(c, Ctx(loja), "pedido", pid, "expirar", {"status": "aguardando_pagamento"}, {"status": "expirado"})
+    return {"expirados": len(venc)}
