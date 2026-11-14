@@ -34,7 +34,7 @@ async function request(endpoint, options = {}) {
 }
 
 export const api = {
-  // Produtos & Categorias (Papelaria Física & Digital)
+  // Produtos & Categorias (Varejo Físico & Digital)
   getCategories: () => request('/categories'),
   getProducts: (params = {}) => {
     const query = new URLSearchParams();
@@ -70,8 +70,13 @@ export const api = {
     body: JSON.stringify({ codigo_retirada })
   }),
 
-  // Orquestrador de Agentes de IA (Catálogo & Vendas por Mensagem)
+  // Orquestrador de Agentes de IA & Cluster de Instâncias
   orquestrarAgente: (data) => request('/agentes/orquestrar', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  getClusterStatus: () => request('/agentes/cluster'),
+  adicionarInstancia: (data) => request('/agentes/instancias', {
     method: 'POST',
     body: JSON.stringify(data)
   }),
