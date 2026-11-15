@@ -14,7 +14,13 @@ def connect():
 def init_db():
     c = connect()
     
-    # 1. Tabelas de Governança, Transações e Auditoria (Arquitetura Própria)
+    # 1. Executa schema.sql oficial (loja, usuario, cliente, produto, pedido, etc.)
+    schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
+    if os.path.exists(schema_path):
+        with open(schema_path, "r", encoding="utf-8") as f:
+            c.executescript(f.read())
+    
+    # 2. Tabelas complementares (Tráfego Pago, Configurações e Cupons)
     c.execute("""
     CREATE TABLE IF NOT EXISTS loja (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
