@@ -65,6 +65,12 @@ Dois agentes especializados concebidos sob o princípio da **Autonomia com Confi
 
 ## 🚀 5. Como Executar o Projeto Rapidamente
 
+## 🌐 Demonstração Online (Live Demo)
+
+- 🖥️ **Aplicação Web (Vercel):** [https://seu-projeto.vercel.app](https://seu-projeto.vercel.app)
+- ⚙️ **API REST & Swagger (Render):** [https://seu-backend.onrender.com/docs](https://seu-backend.onrender.com/docs)
+
+## 💻 Como Rodar Localmente (Desenvolvimento)
 ### Em Um Clique (Windows):
 Basta clicar duas vezes em:
 ```cmd
