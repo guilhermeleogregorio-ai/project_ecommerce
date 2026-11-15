@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.connection import init_db
 from database.seed_data import seed
-from routes import products, customers, sellers, orders, settings, dashboard, traffic
+from routes import products, orders, settings, dashboard, traffic, agentes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,12 +32,11 @@ app.add_middleware(
 
 # Registra todos os módulos de rotas sob o prefixo /api
 app.include_router(products.router, prefix="/api")
-app.include_router(customers.router, prefix="/api")
-app.include_router(sellers.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(traffic.router, prefix="/api")
+app.include_router(agentes.router, prefix="/api")
 
 @app.get("/")
 def root():
